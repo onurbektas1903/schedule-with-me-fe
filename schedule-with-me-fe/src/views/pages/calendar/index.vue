@@ -177,17 +177,19 @@ export default {
       } else {
         const title = this.event.title;
         const meetingProvider = this.event.meetingProvider;
-        let calendarApi = this.newEventData.view.calendar;
+
         this.event.start = Date.parse(this.event.start);
         this.event.end = Date.parse(this.event.end);
         this.event.organizer ="system";
+        let calendarApi = this.newEventData.view.calendar;
+
         meetingService.createMeeting(this.event).then(response => {
           this.currentEvents = calendarApi.addEvent({
             id: response.id,
             title: response.title,
-            start: this.newEventData.date,
-            end: this.newEventData.date,
-            classNames: [meetingProvider],
+            start: response.start,
+            end: response.end
+            // classNames: [response.meetingProvider],
           });
         });
 

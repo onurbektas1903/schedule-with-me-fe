@@ -14,7 +14,7 @@ async function  createMeeting(meeting) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(meeting)
     };
-    await axiosRequest.post(
+   const response = await axiosRequest.post(
         '/meetings/create',
         meeting,
         {
@@ -23,6 +23,7 @@ async function  createMeeting(meeting) {
             }
         }
     );
+   return response.data;
 }
 async function getAll() {
 

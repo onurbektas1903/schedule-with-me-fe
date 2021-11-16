@@ -22,7 +22,7 @@ export default {
       meetingAccounts: [
         {
           id: "1",
-          userName: "onur.bektas@gmail.com",
+          userName: "bektaso1903@gmail.com",
           clientId: "clientTest",
           clientSecret: "*****"
         }

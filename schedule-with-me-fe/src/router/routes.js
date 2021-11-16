@@ -86,7 +86,7 @@ export default [{
         meta: {
             authRequired: true,
         },
-        component: () => import('../views/pages/dashboard/index')
+        component: () => import('../views/pages/calendar/index')
     },
     {
         path: '/apps/calendar',

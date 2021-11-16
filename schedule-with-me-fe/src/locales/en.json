@@ -55,8 +55,11 @@
     "menu": {
       "text": "Menu"
     },
+    "provider": {
+      "text": "Meeting Providers"
+    },
     "dashboard": {
-      "text": "Dashboard"
+      "text": "Calendar"
     },
     "more": {
       "text": "More"

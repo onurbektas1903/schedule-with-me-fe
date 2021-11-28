@@ -6,6 +6,12 @@ export const authComputed = {
   }),
   ...mapGetters('auth', ['loggedIn']),
 }
+export const authkeycloakComputed = {
+  ...mapState('authkeyclaok', {
+    currentUser: (state) => state.currentUser,
+  }),
+  ...mapGetters('authkeyclaok', ['loggedIn']),
+}
 
 export const layoutComputed = {
   ...mapState('layout', {
@@ -33,6 +39,8 @@ export const providerComputed = {
 }
 
 export const authMethods = mapActions('auth', ['logIn', 'logOut', 'register', 'resetPassword'])
+
+export const authkeycloakMethods = mapActions('auth', ['logIn', 'logOut'])
 
 export const layoutMethods = mapActions('layout', ['changeLayoutType', 'changeLayoutMode', 'changeLayoutWidth', 'changeLeftSidebarType', 'changeTopbar', 
 'changeLoaderValue', 'changeLayoutPosition','changeSidebarColor'])

@@ -84,7 +84,7 @@ export default [{
         path: '/',
         name: 'home',
         meta: {
-            authRequired: true,
+            authRequired: false,
         },
         component: () => import('../views/pages/calendar/index')
     },
@@ -92,7 +92,7 @@ export default [{
         path: '/apps/calendar',
         name: 'calendar',
         meta: {
-            authRequired: true,
+            authRequired: false,
         },
         component: () => import('../views/pages/calendar/index')
     },
@@ -321,12 +321,12 @@ export default [{
         component: () => import('../views/pages/tables/bootstrap')
     },
     {
-        path: '/tables/datatable',
+        path: '/tables/meetingProvider',
         name: 'datatable',
         meta: {
-            authRequired: true,
+            authRequired: false,
         },
-        component: () => import('../views/pages/tables/datatable')
+        component: () => import('../views/pages/tables/meetingProvider')
     },
     {
         path: '/charts',

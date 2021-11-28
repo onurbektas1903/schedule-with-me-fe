@@ -14,6 +14,6 @@ export const menuItems = [{
     {
         id: 3,
         label: "menuitems.provider.text",
-        link: "/tables/datatable"
+        link: "/tables/meetingProvider"
     },
 ];

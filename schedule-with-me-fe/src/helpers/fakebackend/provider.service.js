@@ -3,6 +3,7 @@ import AxiosRequest from "@/helpers/axios/AxiosRequest";
 export const providerService = {
     createMeetingProvider,
     getAll,
+    createProviderWithFileCredentials
 };
 
 async function  createMeetingProvider(provider) {
@@ -22,9 +23,31 @@ async function  createMeetingProvider(provider) {
         }
     );
 }
+async function  createProviderWithFileCredentials(meetingProvider,file) {
+    var axiosRequest = new AxiosRequest("http://localhost:8080");
+    let formData = new FormData();
+    formData.append("file", file);
+    formData.append('meetingProviderDTO',
+        new Blob([JSON.stringify(meetingProvider)], {
+        type: "application/json"
+    }));
+
+    // formData.append('file', file);
+    await axiosRequest.post(
+        '/meeting-provider/create-with-files',
+        formData,
+
+        {
+            headers: {
+                ContentType: { 'Content-Type': 'multipart/form-data' }
+            }
+        }
+    );
+}
 async function getAll() {
 
     var axiosRequest = new AxiosRequest("http://localhost:8080");
+    let user = JSON.parse(sessionStorage.getItem("authUser"));
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
     const response = await axiosRequest.get(
@@ -33,6 +56,9 @@ async function getAll() {
 
             headers: {
                 ContentType: { 'Content-Type': 'application/json' },
+                Authorization: `Bearer ${
+                    user.token
+                }`
             }
         }
     );

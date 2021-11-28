@@ -5,6 +5,7 @@ import AxiosRequest from "@/helpers/axios/AxiosRequest";
 export const meetingService = {
     createMeeting,
     getAll,
+    getMeetingById
 };
 
 async function  createMeeting(meeting) {
@@ -26,12 +27,36 @@ async function  createMeeting(meeting) {
    return response.data;
 }
 async function getAll() {
-
+    let user = JSON.parse(sessionStorage.getItem("authUser"));
     var axiosRequest = new AxiosRequest("http://localhost:8080");
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
     const response = await axiosRequest.get(
         `/meetings/`,
+        {
+
+            headers: {
+                ContentType: { 'Content-Type': 'application/json' },
+                Authorization: `Bearer ${
+                    user.token
+                }`
+            }
+        }
+    );
+
+    if (!response || !response.data){
+        return undefined;
+    }
+
+    return response.data;
+}
+async function getMeetingById(id) {
+
+    var axiosRequest = new AxiosRequest("http://localhost:8080");
+
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    const response = await axiosRequest.get(
+        `/meetings/${id}`,
         {
 
             headers: {

@@ -19,18 +19,21 @@ export default {
   },
   data() {
     return {
-      meetingAccounts: [
-        {
-          id: "1",
-          userName: "bektaso1903@gmail.com",
-          clientId: "clientTest",
-          clientSecret: "*****"
-        }
-      ],
+      file: '',
+      meetingAccounts: [],
       showModal: false,
       showAccountsModal: false,
+      showAccountsWithFileModal: false,
       submitted: false,
+      providerAccount: {
+        id: "",
+        userName: "",
+        clientId: "",
+        clientSecret: "",
+        fileName: ""
+      },
       provider: {
+        id: "",
         name: "",
         meetingProviderType: "",
         providerAccounts: [],
@@ -85,7 +88,20 @@ export default {
     this.totalRows = this.items.length;
   },
   methods: {
+    handleFileUpload(event,account) {
+      this.file = event.target.files[0]
+      account.fileName = this.file.name;
+    },
+    handleRowClicked(item, index, event) {
+      this.showModal = true;
+      this.provider = item;
+    },
     addProvider() {
+      this.showModal = true;
+      this.meetingAccounts = [];
+      this.provider = {};
+    },
+    editProvider() {
       this.showModal = true;
       this.provider = {};
     },
@@ -95,14 +111,26 @@ export default {
       this.provider = {};
     },
     createOrUpdateProvider(provider) {
-      providerService.createMeetingProvider(
-          provider
-      ).then(result => {
-        providerService.getAll().then(value => {
-          this.tableData = value;
-        });
-        console.log(result);
-      })
+      if(provider.meetingProviderType ==='GOOGLE_MEET'){
+        providerService.createProviderWithFileCredentials(
+            provider,this.file
+        ).then(result => {
+          providerService.getAll().then(value => {
+            this.tableData = value;
+          });
+          console.log(result);
+        })
+      }else{
+        providerService.createMeetingProvider(
+            provider
+        ).then(result => {
+          providerService.getAll().then(value => {
+            this.tableData = value;
+          });
+          console.log(result);
+        })
+      }
+
     },
     successmsg() {
       Swal.fire({
@@ -114,10 +142,20 @@ export default {
       });
     },
     openAccountsModal(e) {
+      if(!this.provider.id || this.provider.id === null){
+        this.meetingAccounts = [];
+      }
       this.showAccountsModal = true;
     },
     hideAccountsModal(e) {
       this.showAccountsModal = false;
+      this.meetingAccounts = this.meetingAccounts.filter(value => value.userName != "");
+    },
+    openAccountsWithFileModal(e) {
+      this.showAccountsWithFileModal = true;
+    },
+    hideAccountsWithFileModal(e) {
+      this.showAccountsWithFileModal = false;
       this.meetingAccounts = this.meetingAccounts.filter(value => value.userName != "");
     },
     insertNewAccount(e) {
@@ -125,11 +163,13 @@ export default {
         id: "",
         userName: "",
         clientId: "",
-        clientSecret: ""
+        clientSecret: "",
+        file: ""
       })
     },
     saveMeetingAccounts(e) {
       this.provider.providerAccounts = this.meetingAccounts;
+      this.showAccountsWithFileModal = false;
       this.showAccountsModal = false;
       console.log("save accounts");
     },
@@ -175,7 +215,7 @@ export default {
       <div class="col-12">
         <div class="card">
           <div class="card-body">
-            <h4 class="card-title">Datatable</h4>
+            <h4 class="card-title">Konferans Sağlayıcı İşlemleri</h4>
             <div class="row mt-4" id="datatable_wrapper">
               <div class="col-sm-12 col-md-6">
                 <div id="tickets-table_length" class="dataTables_length">
@@ -214,6 +254,8 @@ export default {
                   :sort-desc.sync="sortDesc"
                   :filter="filter"
                   :selectable="true"
+                  @row-dblclicked="handleRowClicked"
+                  select-mode="single"
                   :filter-included-fields="filterOn"
                   @filtered="onFiltered"
               ></b-table>
@@ -350,7 +392,12 @@ export default {
                 placeholder="Konferans Hesapları Ekle"
             >
             </multiselect>
-            <b-button variant="light" @click="openAccountsModal">Hesap Ekle</b-button>
+            <b-button v-if="provider.meetingProviderType === 'ZOOM'" variant="light" @click="openAccountsModal">Hesap
+              Ekle
+            </b-button>
+            <b-button variant="light" v-if="provider.meetingProviderType === 'GOOGLE_MEET'"
+                      @click="openAccountsWithFileModal">Hesap Ekle
+            </b-button>
             <div
                 v-if="submitted && !$v.provider.providerAccounts.required"
                 class="invalid-feedback"
@@ -376,36 +423,83 @@ export default {
         hide-footer
         centered
     >
-      <div class="row">
-        <h4 class="card-title">Basic Example</h4>
+      <form>
+        <div class="row">
 
-        <div class="table-responsive">
-          <table class="table mb-0"
-                 contenteditable="true"
-          >
-            <thead>
-            <tr>
-              <th>Kullanıcı adı</th>
-              <th>Client Id</th>
-              <th>Client Secret</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr v-for="account in meetingAccounts" :key="account.id">
-              <td>{{ account.userName }}</td>
-              <td>{{ account.clientId }}</td>
-              <td>{{ account.clientSecret }}</td>
-            </tr>
-            </tbody>
-            <br></br>
-            <tfoot class="text-end">
-            <b-button variant="light" @click="insertNewAccount">Yeni Hesap</b-button>
-            <b-button variant="light" @click="saveMeetingAccounts">Kaydet</b-button>
-            <b-button variant="light" @click="hideAccountsModal">Kapat</b-button>
-            </tfoot>
-          </table>
+          <div class="table-responsive">
+            <table class="table mb-0">
+              <thead>
+              <tr>
+                <th>Kullanıcı adı</th>
+                <th v-if="provider.meetingProviderType === 'ZOOM'">Client Id</th>
+                <th v-if="provider.meetingProviderType === 'ZOOM'">Client Secret</th>
+              </tr>
+              </thead>
+              <tbody>
+              <tr v-for="(account,index) in meetingAccounts" :key="account.id">
+                <td><input class="form-control" v-model="account.userName"/></td>
+                <td v-if="provider.meetingProviderType === 'ZOOM'"><input class="form-control"
+                                                                          v-model="account.clientId"/></td>
+                <td v-if="provider.meetingProviderType === 'ZOOM'"><input class="form-control"
+                                                                          v-model="account.clientSecret"/></td>
+              </tr>
+              </tbody>
+              <br></br>
+              <div class="text-end">
+                <b-button variant="light" @click="insertNewAccount">Yeni Hesap</b-button>
+                <b-button class="ms-1" variant="light" @click="saveMeetingAccounts">Kaydet</b-button>
+                <b-button variant="light" @click="hideAccountsModal">Kapat</b-button>
+              </div>
+            </table>
+          </div>
         </div>
-      </div>
+      </form>
+    </b-modal>
+    <b-modal
+        v-model="showAccountsWithFileModal"
+        title="Konferans Hesapları"
+        title-class="text-black font-18"
+        header-class="py-3 px-4 border-bottom-0"
+        body-class="p-4"
+        hide-footer
+        centered
+    >
+      <form>
+        <div class="row">
+
+          <div class="table-responsive">
+            <table class="table mb-0">
+              <thead>
+              <tr>
+                <th>Kullanıcı adı</th>
+                <th>Hesap Kimlik Dosyası</th>
+              </tr>
+              </thead>
+              <tbody>
+              <tr v-for="(account,index) in meetingAccounts" :key="account.id">
+                <td><input class="form-control" v-model="account.userName"/></td>
+                <div class="input-group mb-3">
+                  <td><input
+                      @change="handleFileUpload( $event,account)"
+                      type="file"
+                      class="form-control"
+                      id="inputGroupFile03"
+                      aria-describedby="inputGroupFileAddon03"
+                      aria-label="Upload"
+                  /></td>
+                </div>
+              </tr>
+              </tbody>
+              <br></br>
+              <div class="text-end">
+                <b-button variant="light" @click="insertNewAccount">Yeni Hesap</b-button>
+                <b-button class="ms-1" variant="light" @click="saveMeetingAccounts">Ekle</b-button>
+                <b-button variant="light" @click="hideAccountsWithFileModal">Kapat</b-button>
+              </div>
+            </table>
+          </div>
+        </div>
+      </form>
     </b-modal>
   </Layout>
 </template>

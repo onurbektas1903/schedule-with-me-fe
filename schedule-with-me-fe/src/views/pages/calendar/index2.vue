@@ -8,7 +8,7 @@ import listPlugin from "@fullcalendar/list";
 
 import {required} from "vuelidate/lib/validators";
 import Swal from "sweetalert2";
-import moment from "moment";
+
 import Layout from "../../layouts/main";
 import PageHeader from "@/components/page-header";
 import appConfig from "@/app.config";
@@ -32,6 +32,27 @@ export default {
     return {
       providers:[],
       recipients: [],
+      options: [
+        "Alaska",
+        "Hawaii",
+        "California",
+        "Nevada",
+        "Oregon",
+        "Washington",
+        "Arizona",
+        "Colorado",
+        "Idaho",
+        "Montana",
+        "Nebraska",
+        "New Mexico",
+        "North Dakota",
+        "Utah",
+        "Wyoming",
+        "Alabama",
+        "Arkansas",
+        "Illinois",
+        "Iowa",
+      ],
       title: "Calendar",
       items: [
         {
@@ -57,6 +78,9 @@ export default {
           bootstrapPlugin,
           listPlugin,
         ],
+        viewDidMounth(val) {
+          console.log(val);
+        },
         slotDuration:'00:15:00',
         initialView: "dayGridMonth",
         themeSystem: "bootstrap",
@@ -76,7 +100,6 @@ export default {
       },
       currentEvents: [],
       showModal: false,
-      modalTitle: "",
       showRecipientsModal: false,
       eventModal: false,
       categories: categories,
@@ -127,7 +150,6 @@ export default {
         console.log(value);
       });
     },
-
     getEventObject(event){
       return  {
           id: event.id,
@@ -179,12 +201,12 @@ export default {
             title: response.title,
             start: response.start,
             end: response.end
+            // classNames: [response.meetingProvider],
           });
         });
 
         this.successmsg();
         this.showModal = false;
-        this.event = {};
         this.newEventData = {};
       }
       this.submitted = false;
@@ -225,10 +247,9 @@ export default {
       //TODO fix here
       this.event.start = info.dateStr.split('+')[0];
       this.event.end = info.dateStr.split('+')[0];
+      // this.event.start = info.dateStr;
       this.event.title = ""
       this.showModal = true;
-      this.modalTitle= "Create Meeting"
-
     },
     dateRangeSelected(info) {
       debugger;
@@ -239,20 +260,9 @@ export default {
      */
     editEvent(info) {
       this.edit = info.event;
-      meetingService.getMeetingById(info.event.id).then(resp =>{
-        this.event = resp;
-        var d = moment(resp.end);
-        this.event.start = moment(resp.start).format().split('+')[0];
-        this.event.end = moment(resp.end).format().split('+')[0];
-        // this.event.meetingProvider = {
-        //   id:resp.meetingProvider.id,
-        //   name:resp.meetingProvider.name,
-        //   type:resp.meetingProvider.meetingProviderType
-        // }
-        this.modalTitle= "Edit Meeting"
-        this.showModal = true;
-      });
-
+      this.editevent.editTitle = this.edit.title;
+      this.editevent.editmeetingProvider = this.edit.classNames[0];
+      this.eventModal = true;
     },
 
     closeModal() {
@@ -318,7 +328,7 @@ export default {
     </div>
     <b-modal
       v-model="showModal"
-      :title="this.modalTitle"
+      title="Add New Event"
       title-class="text-black font-18"
       header-class="py-3 px-4 border-bottom-0"
       body-class="p-4"
@@ -428,13 +438,16 @@ export default {
                 v-model="event.meetingProvider"
                 class="form-control form-select"
                 name="meetingProvider"
-
                 :class="{ 'is-invalid': submitted && $v.event.meetingProvider.errors }"
               >
                 <option
-                  v-for="option in this.providers"
-                  :key="option.id"
-                  :value="option"
+                  v-for="option in providers"
+                  :key="option.backgroundColor"
+                  :value="{
+                   id: `${option.id}`,
+                   name:`${option.name}`,
+                   meetingProviderType:`${option.meetingProviderType}`
+                  }"
                   >{{ option.name }}</option
                 >
               </select>

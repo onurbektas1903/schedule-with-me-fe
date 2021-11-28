@@ -62,9 +62,9 @@ router.beforeEach((routeTo, routeFrom, next) => {
             next();
         } else {
             const keyCloakObj = {
-                realm: 'IHTAR',
+                realm: 'obss-scheduler',
                 url: 'http://localhost:8888/auth',
-                clientId: 'schedule-app',
+                clientId: 'schedule-app-fe',
                 onLoad: 'login-required'
             };
             let keycloak = new Keycloak(keyCloakObj);

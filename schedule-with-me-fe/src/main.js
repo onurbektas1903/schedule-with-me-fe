@@ -34,7 +34,10 @@ if (process.env.VUE_APP_DEFAULT_AUTH === "firebase") {
 }
 
 import "@/assets/scss/app.scss";
- 
+import Keycloak from "keycloak-js";
+import SocketApi from "@/helpers/fakebackend/socket-api";
+import Toasted from 'vue-toasted';
+
 Vue.component('VueSlideBar', VueSlideBar)
 Vue.use(VueSweetalert2);
 Vue.component('apexchart', VueApexCharts)
@@ -48,12 +51,62 @@ Vue.use(VueGoogleMaps, {
   },
   installComponents: true
 });
+Vue.use(Toasted, {
+  duration: 1000,
+  position: 'top-center'
+})
 
 Vue.config.productionTip = false
+const keyCloakObj = {
+  realm: 'obss-scheduler',
+  url: 'http://localhost:8888/auth',
+  clientId: 'schedule-app-fe',
+  onLoad: 'login-required'
+};
+let keycloak = new Keycloak(keyCloakObj);
 
-new Vue({
-  router,
-  store,
-  i18n,
-  render: h => h(App)
-}).$mount('#app')
+keycloak.init({onLoad: keyCloakObj.onLoad}).then((auth) => {
+  if (!auth) {
+    window.location.reload();
+  } else {
+    let user = {
+      id: keycloak.idTokenParsed.email,
+      username: keycloak.idTokenParsed.preferred_username,
+      name: keycloak.idTokenParsed.preferred_username,
+      email: keycloak.idTokenParsed.email,
+      token: keycloak.token,
+      roles: keycloak.resourceAccess['schedule-app-be'].roles
+    }
+    var socket = new SocketApi("http://localhost:8080/websocket");
+    socket.connect();
+//Token Refresh
+    setInterval(() => {
+      keycloak.updateToken(70).then((refreshed) => {
+        if (refreshed) {
+
+          user.token = keycloak.token;
+          sessionStorage.setItem("authUser", JSON.stringify(user));
+
+        } else {
+          console.log('Token not refreshed, valid for '
+              + Math.round(keycloak.tokenParsed.exp + keycloak.timeSkew - new Date().getTime() / 1000) + ' seconds');
+        }
+      }).catch(() => {
+        console.log('Failed to refresh token');
+      });
+    }, 6000)
+    sessionStorage.setItem("authUser", JSON.stringify(user));
+    new Vue({
+      router,
+      store,
+      i18n,
+      render: h => h(App)
+    }).$mount('#app')
+      console.log("Authenticated");
+  }
+}).catch(reason => {
+  debugger;
+  console.log(reason);
+});
+
+

@@ -497,8 +497,8 @@ const providers = [
   value: 'ZOOM'
    },
    {
-    name: 'GOOGLE MEET',
-    value: 'GOOGLE_MEET'
+    name: 'GOOGLE',
+    value: 'GOOGLE'
    },
 
 ];

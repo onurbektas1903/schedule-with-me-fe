@@ -60,32 +60,6 @@ router.beforeEach((routeTo, routeFrom, next) => {
     } else if (process.env.VUE_APP_DEFAULT_AUTH === "keycloak") {
         if (sessionStorage.getItem("authUser") != null) {
             next();
-        } else {
-            const keyCloakObj = {
-                realm: 'obss-scheduler',
-                url: 'http://localhost:8888/auth',
-                clientId: 'schedule-app-fe',
-                onLoad: 'login-required'
-            };
-            let keycloak = new Keycloak(keyCloakObj);
-
-            keycloak.init({onLoad: keyCloakObj.onLoad}).then((auth) => {
-
-
-                let user = {
-                    id: "1",
-                    username: keycloak.idTokenParsed.preferred_username,
-                    name: keycloak.idTokenParsed.preferred_username,
-                    email: keycloak.idTokenParsed.preferred_username,
-                    token: keycloak.token
-                }
-                debugger;
-                sessionStorage.setItem("authUser", JSON.stringify(user));
-                next();
-            }).catch(reason => {
-                debugger;
-                console.log(reason);
-            });
         }
     }
 })

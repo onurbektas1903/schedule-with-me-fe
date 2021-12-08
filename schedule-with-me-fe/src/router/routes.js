@@ -89,6 +89,11 @@ export default [{
         component: () => import('../views/pages/calendar/index')
     },
     {
+        path: '/meeting/:id',
+        name: 'editMeet',
+        component: () => import('../views/pages/calendar/index')
+    },
+    {
         path: '/apps/calendar',
         name: 'calendar',
         meta: {
@@ -327,6 +332,14 @@ export default [{
             authRequired: false,
         },
         component: () => import('../views/pages/tables/meetingProvider')
+    },
+    {
+        path: '/accounts/meetingAccounts',
+        name: 'meetingAccount',
+        meta: {
+            authRequired: false,
+        },
+        component: () => import('../views/pages/accounts/meetingAccounts')
     },
     {
         path: '/charts',

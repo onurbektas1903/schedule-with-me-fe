@@ -58,6 +58,9 @@
     "provider": {
       "text": "Meeting Providers"
     },
+    "accounts": {
+      "text": "Meeting Accounts"
+    },
     "dashboard": {
       "text": "Calendar"
     },

@@ -1,46 +1,61 @@
-import { authHeader } from './auth-header';
-import axios from 'axios';
 import AxiosRequest from "@/helpers/axios/AxiosRequest";
+import {
+    MEETING_API_BASE_URL,
+    MEETING_API_GET_ALL_SLOTS_URL,
+    MEETING_API_GET_ALL_URL,
+    MEETING_SLOT_URL
+} from "../../constants/urls/meetingEndpoints";
+const axiosRequest = new AxiosRequest("http://localhost:8080");
 
 export const meetingService = {
     createMeeting,
-    getAll,
-    getMeetingById
+    getMeetingsBtwDates,
+    getMeetingById,
+    createChangeSlotRequest,
+    getSlotRequests
 };
 
 async function  createMeeting(meeting) {
-    var axiosRequest = new AxiosRequest("http://localhost:8080");
-    const requestOptions = {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(meeting)
-    };
    const response = await axiosRequest.post(
-        '/meetings/create',
+       MEETING_API_BASE_URL,
         meeting,
         {
-            headers: {
-                ContentType: { 'Content-Type': 'application/json' }
-            }
+            headers: {}
         }
     );
    return response.data;
 }
-async function getAll() {
-    let user = JSON.parse(sessionStorage.getItem("authUser"));
-    var axiosRequest = new AxiosRequest("http://localhost:8080");
+async function  createSlotRequestApproval(slotRequets,isApproved) {
+   const response = await axiosRequest.post(
+       MEETING_API_BASE_URL,
+        meeting,
+        {
+            headers: {}
+        }
+    );
+   return response.data;
+}
+async function  createChangeSlotRequest(changeSlotRequest) {
+   const response = await axiosRequest.post(
+       MEETING_SLOT_URL,
+       changeSlotRequest,
+        {
+            headers: {}
+        }
+    );
+   return response.data;
+}
+async function getMeetingsBtwDates(start,end) {
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
     const response = await axiosRequest.get(
-        `/meetings/`,
+        MEETING_API_GET_ALL_URL,
         {
-
-            headers: {
-                ContentType: { 'Content-Type': 'application/json' },
-                Authorization: `Bearer ${
-                    user.token
-                }`
-            }
+            params: {
+                start,
+                end
+            },
+            headers: {}
         }
     );
 
@@ -52,11 +67,26 @@ async function getAll() {
 }
 async function getMeetingById(id) {
 
-    var axiosRequest = new AxiosRequest("http://localhost:8080");
-
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     const response = await axiosRequest.get(
-        `/meetings/${id}`,
+        `${MEETING_API_BASE_URL}/${id}`,
+        {
+
+            headers: {
+                ContentType: { 'Content-Type': 'application/json' },
+            }
+        }
+    );
+
+    if (!response || !response.data){
+        return undefined;
+    }
+
+    return response.data;
+}
+async function getSlotRequests(meetingId) {
+
+    const response = await axiosRequest.get(
+        `${MEETING_API_GET_ALL_SLOTS_URL}/${meetingId}`,
         {
 
             headers: {

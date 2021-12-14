@@ -1,11 +1,13 @@
 import AxiosRequest from "@/helpers/axios/AxiosRequest";
 import {PROVIDER_API_BASE_URL, PROVIDER_API_GET_ALL_URL} from "@/constants/urls/providerEndpoints";
+import {GOOGLE_API_ACTIVE_PASSIVE_URL} from "@/constants/urls/googleEndpoints";
 var axiosRequest = new AxiosRequest("http://localhost:8080");
 
 export const providerService = {
     createMeetingProvider,
     getAll,
-    getProviderById
+    getProviderById,
+    updateProviderActivePassiveInfo
 };
 
 async function  createMeetingProvider(provider) {
@@ -45,6 +47,17 @@ async function getProviderById(id) {
         return undefined;
     }
     return response.data;
+}
+async function  updateProviderActivePassiveInfo(id,isActive) {
+    await axiosRequest.put(
+        PROVIDER_API_BASE_URL+ `/${id}/${isActive}`,
+        {},
+        {
+            headers: {
+                ContentType: { 'Content-Type': 'application/json' }
+            }
+        }
+    );
 }
 function handleResponse(response) {
     return response.text().then(text => {

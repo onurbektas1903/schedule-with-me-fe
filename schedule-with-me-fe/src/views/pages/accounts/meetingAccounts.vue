@@ -23,10 +23,6 @@ export default {
     return {
       providers: providers,
       selectedProviderType: "",
-      selectedAccount: {
-        id:"",
-        isActive:""
-      },
       file: '',
       meetingAccounts: [],
       googleAccount: {
@@ -146,7 +142,7 @@ export default {
     },
     confirm() {
       Swal.fire({
-        title: "Are you sure?",
+        title: "Emin misiniz?",
         text: "You won't be able to delete this!",
         icon: "warning",
         showCancelButton: true,
@@ -173,16 +169,14 @@ export default {
       this.file = event.target.files[0]
       this.googleAccount.accountDetails.fileName = this.file.name;
     },
-    handleAccountSelected(item){
-        this.selectedAccount = item;
-    },
+
     handleAccountEdit(item) {
       switch (this.selectedProviderType) {
         case 'ZOOM': {
 
           accountService.findZoomAccountById(item.id).then(resp => {
             this.zoomAccount = resp;
-            this.showGoogleModal = true;
+            this.showZoomModal = true;
           });
           break;
         }
@@ -195,25 +189,6 @@ export default {
         }
       }
       this.showModal = true;
-    },
-
-    activateDeactivateAccount(isActive){
-      switch (this.selectedProviderType) {
-        case 'ZOOM': {
-          accountService.updateZoomAccountActivePassiveInfo(this.selectedAccount.id,isActive).then(value => {
-            this.successmsg();
-            this.getZoomAccounts();
-          });
-          break;
-        }
-        case 'GOOGLE': {
-          accountService.updateGoogleAccountActivePassiveInfo(this.selectedAccount.id,isActive).then(value => {
-            this.successmsg();
-            this.getGoogleAccounts();
-          });
-          break;
-        }
-      }
     },
     addProviderAccount() {
       switch (this.selectedProviderType) {
@@ -377,7 +352,6 @@ export default {
                   :filter="filter"
                   :selectable="true"
                   @row-dblclicked="handleAccountEdit"
-                  @row-clicked="handleAccountSelected"
                   select-mode="single"
                   :filter-included-fields="filterOn"
                   @filtered="onFiltered"
@@ -402,16 +376,6 @@ export default {
             <div class="col-sm-12 col-md-6">
               <div id="tickets-table_length" class="dataTables_length">
                 <b-button variant="light" @click="addProviderAccount">Konferans Sağlayıcı Ekle</b-button>
-              </div>
-            </div>
-            <div class="col-sm-12 col-md-6">
-              <div id="active-id" class="dataTables_length">
-                <b-button v-if="!selectedAccount.isActive" variant="light" @click="activateDeactivateAccount(true)">Aktif Yap</b-button>
-              </div>
-            </div>
-            <div class="col-sm-12 col-md-6">
-              <div id="passive-id" class="dataTables_length">
-                <b-button v-if="selectedAccount.isActive" variant="light" @click="activateDeactivateAccount(false)">Pasif Yap</b-button>
               </div>
             </div>
           </div>
@@ -473,19 +437,6 @@ export default {
                   aria-label="Upload"
               />
             </div>
-<!--            <div class="form-check form-check-primary mb-3">-->
-<!--              <label class="form-check-label" for="active-passive">-->
-<!--                Aktif/Pasif-->
-<!--              </label>-->
-<!--              <input-->
-<!--                  v-model="googleAccount.isActive"-->
-<!--                  class="form-check-input"-->
-<!--                  type="checkbox"-->
-<!--                  id="active-passive"-->
-<!--                  checked-->
-<!--              />-->
-
-<!--            </div>-->
             <div class="text-end">
               <b-button variant="danger" id="req-btn-delete-event" @click="confirm">Sil</b-button>
               <b-button variant="light" @click="hideModal">Kapat</b-button>
@@ -558,18 +509,6 @@ export default {
           >
             This value is required.
           </div>
-        </div>
-        <div class="mb-3">
-          <label
-              class="form-check-label"
-              for="active-passive-check-box"
-          >Aktif/Pasif</label>
-          <input
-              id="active-passive-check-box"
-              v-model="googleAccount.isActive"
-              type="checkbox"
-              class="form-check-input"
-          />
         </div>
         <div class="text-end">
           <b-button variant="light" @click="hideModal">Kapat</b-button>

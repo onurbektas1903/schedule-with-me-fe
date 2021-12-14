@@ -1,5 +1,9 @@
 import AxiosRequest from "@/helpers/axios/AxiosRequest";
-import {PROVIDER_API_BASE_URL, PROVIDER_API_GET_ALL_URL} from "@/constants/urls/providerEndpoints";
+import {
+    PROVIDER_API_ACTIVE_PASSIVE_URL,
+    PROVIDER_API_BASE_URL, PROVIDER_API_GET_ALL_ACTIVE_URL,
+    PROVIDER_API_GET_ALL_URL
+} from "@/constants/urls/providerEndpoints";
 import {GOOGLE_API_ACTIVE_PASSIVE_URL} from "@/constants/urls/googleEndpoints";
 var axiosRequest = new AxiosRequest("http://localhost:8080");
 
@@ -7,7 +11,8 @@ export const providerService = {
     createMeetingProvider,
     getAll,
     getProviderById,
-    updateProviderActivePassiveInfo
+    updateProviderActivePassiveInfo,
+    getActiveProviders
 };
 
 async function  createMeetingProvider(provider) {
@@ -23,6 +28,21 @@ async function getAll() {
 
     const response = await axiosRequest.get(
         PROVIDER_API_GET_ALL_URL,
+        {
+            headers: {}
+        }
+    );
+
+    if (!response || !response.data){
+        return undefined;
+    }
+
+    return response.data;
+}
+async function getActiveProviders() {
+
+    const response = await axiosRequest.get(
+        PROVIDER_API_GET_ALL_ACTIVE_URL,
         {
             headers: {}
         }
@@ -50,7 +70,7 @@ async function getProviderById(id) {
 }
 async function  updateProviderActivePassiveInfo(id,isActive) {
     await axiosRequest.put(
-        PROVIDER_API_BASE_URL+ `/${id}/${isActive}`,
+        PROVIDER_API_ACTIVE_PASSIVE_URL+ `/${id}/${isActive}`,
         {},
         {
             headers: {

@@ -20,8 +20,6 @@ export const accountService = {
     findZoomAccountById,
     updateGoogleAccount,
     updateZoomAccount,
-    updateGoogleAccountActivePassiveInfo,
-    updateZoomAccountActivePassiveInfo,
     getActiveZoomAccounts,
     getActiveGoogleAccount,
     deleteGoogleAccount,
@@ -41,28 +39,6 @@ async function  updateZoomAccount(account) {
     await axiosRequest.put(
         ZOOM_API_BASE_URL+ `/${account.id}`,
         account,
-        {
-            headers: {
-                ContentType: { 'Content-Type': 'application/json' }
-            }
-        }
-    );
-}
-async function  updateZoomAccountActivePassiveInfo(id,isActive) {
-    await axiosRequest.put(
-        ZOOM_API_ACTIVE_PASSIVE_URL+ `/${id}/${isActive}`,
-        {},
-        {
-            headers: {
-                ContentType: { 'Content-Type': 'application/json' }
-            }
-        }
-    );
-}
-async function  updateGoogleAccountActivePassiveInfo(id,isActive) {
-    await axiosRequest.put(
-        GOOGLE_API_ACTIVE_PASSIVE_URL+ `/${id}/${isActive}`,
-        {},
         {
             headers: {
                 ContentType: { 'Content-Type': 'application/json' }

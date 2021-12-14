@@ -36,8 +36,11 @@ export default {
       slotRequestModal: false,
       slotRequestListModal: false,
       param_id: this.$route.params.id,
+      eventEditable: true,
       providerFilter: "",
       currentUser: {},
+      userCanEdit:true,
+      userCanView:true,
       keycloakUserApi: new KeycloakUserApi(),
       changeSlotRequest: {
         id: "",
@@ -88,7 +91,7 @@ export default {
         droppable: true,
         eventResizableFromStart: true,
         dateClick: this.addEvent,
-        eventClick: this.eventClicked,
+        eventClick: this.handleEventSelected,
         eventsSet: this.handleEvents,
         dateSelection: this.dateRangeSelected,
         weekends: true,
@@ -216,7 +219,7 @@ export default {
                 resp ? resp : []
             );
             if (this.param_id) {
-              this.editEvent(this.param_id);
+              this.handleEventSelected(this.param_id);
             }
           });
     },
@@ -272,6 +275,7 @@ export default {
       this.$router.push({ name: 'home' });
       this.submitted = false;
       this.showModal = false;
+      this.eventEditable = false;
       this.event = {};
     },
     hideSlotRequestModal(e) {
@@ -308,35 +312,52 @@ export default {
     },
     deleteMeeting(id){
       meetingService.deleteMeeting(id).then(response => {
+        Swal.fire("Silindi!", "Görüşme başarıyla iptal edildi.", "success");
+
         let calendarApi = this.$refs.fullCalendar.getApi();
         calendarApi.refetchEvents();
         this.hideModal();
       });
     },
     /**
-     * Delete event
-     */
-    deleteEvent() {
-      //TODO remove event
-    },
-    /**
      * Modal open for add event
      */
     addEvent(info) {
+
+      if(info.date < new Date()){
+        this.errormsg('Geçmişe yönelik görüşme oluşturulamaz');
+        return;
+      }
+      this.setEventDefault();
+      this.eventEditable = true;
       this.newEventData = info;
-      this.event.id = '';
       this.event.start = info.dateStr.split('+')[0];
       this.event.end = info.dateStr.split('+')[0];
+      this.modalTitle = "Görüşme Oluştur"
+      this.showModal = true;
+      this.getActiveProviders();
+    },
+    setEventDefault() {
+      this.event.id = '';
       this.event.title = '';
       this.event.description = '';
       this.event.meetingURL = '';
       this.event.organizer = this.currentUser.email;
-      this.modalTitle = "Create Meeting"
-      this.showModal = true;
-      this.getProviders();
     },
     getProviders() {
       providerService.getAll().then(resp => {
+        this.providers = resp.map(provider => {
+          return {
+            name: provider.name,
+            id: provider.id,
+            meetingProviderType: provider.meetingProviderType,
+            conferenceType: provider.conferenceType
+          };
+        })
+      });
+    },
+    getActiveProviders() {
+      providerService.getActiveProviders().then(resp => {
         this.providers = resp.map(provider => {
           return {
             name: provider.name,
@@ -351,20 +372,31 @@ export default {
       debugger;
       console.log(info);
     },
-    eventClicked(info) {
-      this.editEvent(info.event.id);
+    // kuullanıcı, rolü standart kullanıcı değilse, katılmcı veya eventi yaratansa edit yapabilir
+    setUserPermissions() {
+      this.isUserParticipant = this.isUserRecipient();
+      this.userCanEdit = this.currentUser && (this.isUserOrganizerOrAdmin()
+          || this.event.organizer === this.currentUser.email);
+      this.userCanView = this.userCanEdit || this.isUserParticipant
     },
-    checkUserCanEdit() {
-      return this.currentUser && this.currentUser.roles.find(role => role !== 'STANDART_USER') || this.event.recipients.filter(value => value === this.currentUser.email);
+    isUserRecipient(){
+      let recipients = this.event.recipients.filter(recipient => recipient.name === this.currentUser.email);
+      return recipients &&  recipients.length >0
+    },
+    isUserOrganizerOrAdmin(){
+      let role = this.currentUser.roles.find(role => role === 'ADMIN' || role === 'ORGANIZER');
+      return  role && role.length >0;
     },
     checkUserCanAsk() {
       return this.currentUser && this.event.organizer !== this.user.email && this.event.id !== "";
     },
-    editEvent(id) {
-      this.getProviders();
-      if (this.checkUserCanEdit()) {
+    handleEventSelected(info) {
+
+
+        this.getProviders();
         // this.edit = info.event;
-        meetingService.getMeetingById(id).then(resp => {
+        this.eventEditable = info.event.start >= new Date();
+        meetingService.getMeetingById(info.event.id).then(resp => {
           console.log(this.providers);
           this.event = resp;
           this.event.start = moment(resp.start).format().split('+')[0];
@@ -377,13 +409,16 @@ export default {
                 conferenceType: resp.meetingProvider.conferenceType,
                 name: resp.meetingProvider.name
               };
-          this.modalTitle = "Edit Meeting"
-          this.showModal = true;
-          this.isUserParticipant = this.event.recipients
-              .filter(recipient => recipient.name === this.currentUser.email).length === 1
+          this.modalTitle = "Güncelle"
+
+          this.setUserPermissions();
+          if(this.userCanView){
+            this.showModal = true;
+          }else{
+            this.setEventDefault();
+          }
         });
-      }
-    },
+      },
 
     createChangeMailTitle() {
       //TODO ingilizce hale getir
@@ -430,9 +465,9 @@ export default {
         creator: slotReq.creator
       }
     },
-    confirm() {
+    confirmSlot() {
       Swal.fire({
-        title: "Are you sure?",
+        title: "Silmek İstediğinizden Etmek Emin Misiniz?",
         text: "You won't be able to delete this!",
         icon: "warning",
         showCancelButton: true,
@@ -441,8 +476,23 @@ export default {
         confirmButtonText: "Yes, delete it!",
       }).then((result) => {
         if (result.value) {
-          this.deleteEvent();
+          this.deleteSlotRequest(this.changeSlotRequest.id);
           Swal.fire("Deleted!", "Event has been deleted.", "success");
+        }
+      });
+    },
+    confirMeet(eventId) {
+      Swal.fire({
+        title: "Görüşmeyi İptal Etmek İstediğinizden Emin Misiniz?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#34c38f",
+        cancelButtonColor: "#f46a6a",
+        confirmButtonText: "Evet!",
+        cancelButtonText:"Vazgeç"
+      }).then((result) => {
+        if (result.value) {
+          this.deleteMeeting(eventId);
         }
       });
     },
@@ -462,6 +512,15 @@ export default {
         position: "center",
         icon: "success",
         title: "Event has been saved",
+        showConfirmButton: false,
+        timer: 1000,
+      });
+    },
+    errormsg(msg) {
+      Swal.fire({
+        position: "center",
+        icon: "error",
+        title: msg,
         showConfirmButton: false,
         timer: 1000,
       });
@@ -563,7 +622,7 @@ export default {
                   type="text"
                   class="form-control"
                   placeholder="Organizatör Ekle"
-                  :readonly="!this.checkUserCanEdit"
+                  :readonly="!this.userCanEdit"
                   :class="{ 'is-invalid': submitted && $v.event.organizer.$error }"
               />
               <div
@@ -624,6 +683,7 @@ export default {
             <div class="mb-3">
               <label>Katılımcılar</label>
               <multiselect
+                  :readonly = !this.eventEditable
                   v-model="event.recipients"
                   :options="this.recipients"
                   track-by="name"
@@ -668,12 +728,12 @@ export default {
         </div>
 
         <div class="text-end">
-          <b-button v-if="event.id !== '' && (currentUser.email === event.organizer || currentUser.roles.filter(value => value === 'STANDART_USER').length<=0)"
-                    variant="danger" id="btn-delete-meet-event" @click="deleteMeeting(event.id)"
+          <b-button v-if="this.eventEditable && event.id !== '' && (currentUser.email === event.organizer || currentUser.roles.filter(value => value === 'STANDART_USER').length<=0)"
+                    variant="danger" id="btn-delete-meet-event" @click="confirMeet(event.id)"
           >Sil
           </b-button>
-          <b-button variant="light" @click="hideModal">Close</b-button>
-          <b-button type="submit" variant="success" class="ms-1">Create event</b-button>
+          <b-button variant="light" @click="hideModal">Kapat</b-button>
+          <b-button  v-if="this.eventEditable" type="submit" variant="success" class="ms-1">Kaydet</b-button>
           <b-button v-if=" this.event.id != '' "
                     @click="openSlotListModal" variant="success" class="ms-1">Değişim Talepleri
           </b-button>
@@ -766,7 +826,7 @@ export default {
         </div>
         <div class="row mt-2">
           <div class="col-6">
-            <b-button variant="danger" id="req-btn-delete-event" @click="confirm"
+            <b-button variant="danger" id="req-btn-delete-event" @click="confirmSlot"
             >Sil
             </b-button
             >
@@ -860,7 +920,7 @@ export default {
 
           <div class="table-responsive">
             <table class="table mb-0"
-                   contenteditable="true"
+                   contenteditable="false"
             >
               <thead>
               <tr>

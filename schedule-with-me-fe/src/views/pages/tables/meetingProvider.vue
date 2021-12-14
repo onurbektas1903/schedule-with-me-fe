@@ -22,6 +22,10 @@ export default {
     return {
       file: '',
       meetingAccounts: [],
+      selectedProvider: {
+        id:"",
+        isActive:""
+      },
       showModal: false,
       showAccountsModal: false,
       showAccountsWithFileModal: false,
@@ -34,7 +38,8 @@ export default {
         name: "",
         meetingProviderType: "",
         providerAccounts: [],
-        conferenceType: ""
+        conferenceType: "",
+        isActive: ""
       },
       validations: {
         provider: {
@@ -62,6 +67,10 @@ export default {
         {
           key: "meetingProviderType",
           sortable: true,
+        },
+        {
+          key: "isActive",
+          sortable: true,
         }
       ],
     };
@@ -79,13 +88,11 @@ export default {
   },
   mounted() {
     // Set the initial number of items
-    providerService.getAll().then(value => {
-      this.tableData = value;
-    })
+   this.getProviders();
     this.totalRows = this.items.length;
   },
   methods: {
-    handleProviderSelected(e){
+    handleProviderTypeSelected(e){
       this.meetingAccounts = [];
       switch (this.provider.meetingProviderType){
         case 'ZOOM': {
@@ -103,7 +110,18 @@ export default {
         }
       }
     },
-    handleRowClicked(item, index, event) {
+    activateDeactivateProvider(isActive){
+
+        providerService.updateProviderActivePassiveInfo(this.selectedProvider.id,isActive).then(value => {
+          this.successmsg();
+          this.getProviders();
+        });
+
+    },
+    handleProviderSelected(item){
+      this.selectedProvider = item;
+    },
+    handleProviderEdit(item) {
 
       providerService.getProviderById(item.id).then(resp => {
         this.provider = resp;
@@ -131,18 +149,21 @@ export default {
           providerService.createMeetingProvider(
             provider
         ).then(result => {
-          providerService.getAll().then(value => {
-            this.tableData = value;
-          });
+        this.getProviders();
           console.log(result);
         })
 
+    },
+    getProviders() {
+      providerService.getAll().then(value => {
+        this.tableData = value;
+      });
     },
     successmsg() {
       Swal.fire({
         position: "center",
         icon: "success",
-        title: "Event has been saved",
+        title: "İşlem başarıyla gerçekleşti",
         showConfirmButton: false,
         timer: 1000,
       });
@@ -167,7 +188,8 @@ export default {
         name,
         meetingProviderType,
         providerAccounts,
-        conferenceType
+        conferenceType,
+        isActive:true
       };
       this.createOrUpdateProvider(
           provider
@@ -194,6 +216,16 @@ export default {
               <div class="col-sm-12 col-md-6">
                 <div id="tickets-table_length" class="dataTables_length">
                   <b-button variant="light" @click="addProvider">Konferans Sağlayıcı Ekle</b-button>
+                </div>
+                <div class="col-sm-12 col-md-6">
+                  <div id="active-id" class="dataTables_length">
+                    <b-button v-if="!selectedProvider.isActive" variant="light" @click="activateDeactivateProvider(true)">Aktif Yap</b-button>
+                  </div>
+                </div>
+                <div class="col-sm-12 col-md-6">
+                  <div id="passive-id" class="dataTables_length">
+                    <b-button v-if="selectedProvider.isActive" variant="light" @click="activateDeactivateProvider(false)">Pasif Yap</b-button>
+                  </div>
                 </div>
               </div>
               <!-- Search -->
@@ -228,7 +260,8 @@ export default {
                   :sort-desc.sync="sortDesc"
                   :filter="filter"
                   :selectable="true"
-                  @row-dblclicked="handleRowClicked"
+                  @row-dblclicked="handleProviderEdit"
+                  @row-clicked="handleProviderSelected"
                   select-mode="single"
                   :filter-included-fields="filterOn"
                   @filtered="onFiltered"
@@ -307,7 +340,7 @@ export default {
             <div class="mb-3">
               <label class="form-label">Konferans Sağlayıcı Tipi</label>
               <select
-                  @change="handleProviderSelected"
+                  @change="handleProviderTypeSelected"
                   v-model="provider.meetingProviderType"
                   class="form-control form-select"
                   name="category"

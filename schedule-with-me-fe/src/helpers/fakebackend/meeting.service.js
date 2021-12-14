@@ -12,20 +12,13 @@ export const meetingService = {
     getMeetingsBtwDates,
     getMeetingById,
     createChangeSlotRequest,
-    getSlotRequests
+    getSlotRequests,
+    createSlotRequestApproval,
+    deleteSlotRequest,
+    deleteMeeting
 };
 
 async function  createMeeting(meeting) {
-   const response = await axiosRequest.post(
-       MEETING_API_BASE_URL,
-        meeting,
-        {
-            headers: {}
-        }
-    );
-   return response.data;
-}
-async function  createSlotRequestApproval(slotRequets,isApproved) {
    const response = await axiosRequest.post(
        MEETING_API_BASE_URL,
         meeting,
@@ -42,6 +35,24 @@ async function  createChangeSlotRequest(changeSlotRequest) {
         {
             headers: {}
         }
+    );
+   return response.data;
+}
+async function  createSlotRequestApproval(changeSlotRequest,isApproved) {
+   const response = await axiosRequest.put(
+       `${MEETING_SLOT_URL}/${isApproved}`,
+       changeSlotRequest,
+        {
+            headers: {}
+        }
+    );
+   return response.data;
+}
+
+async function  deleteSlotRequest(id) {
+   const response = await axiosRequest.delete(
+       `${MEETING_SLOT_URL}/${id}`,{},{}
+
     );
    return response.data;
 }
@@ -81,6 +92,13 @@ async function getMeetingById(id) {
         return undefined;
     }
 
+    return response.data;
+}
+async function  deleteMeeting(id) {
+    const response = await axiosRequest.delete(
+        `${MEETING_API_BASE_URL}/${id}`,{},{}
+
+    );
     return response.data;
 }
 async function getSlotRequests(meetingId) {

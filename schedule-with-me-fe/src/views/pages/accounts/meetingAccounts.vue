@@ -20,27 +20,27 @@ export default {
   },
   data() {
     return {
-      providers:providers,
-      selectedProviderType:"",
+      providers: providers,
+      selectedProviderType: "",
       file: '',
       meetingAccounts: [],
-      googleAccount:{
+      googleAccount: {
         id: "",
         accountMail: "",
         applicationName: "",
         isActive: true,
-        accountDetails:{
+        accountDetails: {
           adminUserEmail: "",
           fileName: ""
         }
 
       },
-      zoomAccount:{
+      zoomAccount: {
         id: "",
         accountMail: "",
         applicationName: "",
         isActive: true,
-        accountDetails:{
+        accountDetails: {
           apiKey: "",
           apiSecret: ""
         }
@@ -114,14 +114,14 @@ export default {
     this.totalRows = this.items.length;
   },
   methods: {
-    handleProviderSelected(e){
-      this.tableData =[];
-      switch (this.selectedProviderType){
+    handleProviderSelected(e) {
+      this.tableData = [];
+      switch (this.selectedProviderType) {
         case 'ZOOM': {
           accountService.getZoomAccounts().then(resp => {
-           this.tableData = resp
-         });
-        break;
+            this.tableData = resp
+          });
+          break;
         }
         case 'GOOGLE': {
           this.getGoogleAccounts();
@@ -129,32 +129,74 @@ export default {
         }
       }
     },
-    getZoomAccounts(){
+    getZoomAccounts() {
       accountService.getZoomAccounts().then(resp => {
         this.tableData = resp
       });
     },
-    getGoogleAccounts(){
-        accountService.getGoogleAccounts().then(resp => {
+    getGoogleAccounts() {
+      accountService.getGoogleAccounts().then(resp => {
         this.tableData = resp
+      });
+    },
+    confirm() {
+      Swal.fire({
+        title: "Are you sure?",
+        text: "You won't be able to delete this!",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#34c38f",
+        cancelButtonColor: "#f46a6a",
+        confirmButtonText: "Yes, delete it!",
+      }).then((result) => {
+        if (result.value) {
+          this.deleteAccount();
+          Swal.fire("Deleted!", "Event has been deleted.", "success");
+        }
+      });
+    },
+    deleteAccount(id) {
+      accountService.deleteGoogleAccount(this.googleAccount.id).then(value => {
+        this.googleAccount = {};
+        this.getGoogleAccounts();
+        this.file = null;
+        this.showGoogleModal = false;
+
       });
     },
     handleFileUpload(event) {
       this.file = event.target.files[0]
       this.googleAccount.accountDetails.fileName = this.file.name;
     },
-    handleRowClicked(item, index, event) {
+    handleAccountSelected(item) {
+      switch (this.selectedProviderType) {
+        case 'ZOOM': {
+
+          accountService.findZoomAccountById(item.id).then(resp => {
+            this.zoomAccount = resp;
+            this.showGoogleModal = true;
+          });
+          break;
+        }
+        case 'GOOGLE': {
+          accountService.findGoogleAccountById(item.id).then(resp => {
+            this.googleAccount = resp;
+            this.showGoogleModal = true;
+          });
+          break;
+        }
+      }
       this.showModal = true;
     },
     addProviderAccount() {
-      switch (this.selectedProviderType){
+      switch (this.selectedProviderType) {
         case 'ZOOM': {
           this.zoomAccount = {
             id: "",
             accountMail: "",
             applicationName: "",
             isActive: true,
-            accountDetails:{
+            accountDetails: {
               apiKey: "",
               apiSecret: ""
             }
@@ -192,14 +234,30 @@ export default {
       this.totalRows = filteredItems.length;
       this.currentPage = 1;
     },
+    updateGoogleAccount() {
+      accountService.updateGoogleAccount(this.googleAccount, this.file).then(resp => {
+        this.handleGoogleSaveOrUpdateResult();
+      }).catch(error => {
+        this.$toasted.show("fasd");
+        // this.$toasted.show(accountExceptionHandler(error.response.data));
+        console.log(error);
+      });
+    },
+    handleGoogleSaveOrUpdateResult() {
+      this.successmsg();
+      this.showGoogleModal = false;
+      this.googleAccount = {};
+      this.getGoogleAccounts();
+    },
+    saveOrUpdateGoogleAccount() {
+      this.googleAccount.id && this.googleAccount.id !== '' ? this.updateGoogleAccount() : this.saveGoogleAccount();
+    },
     saveGoogleAccount(e) {
       //TODO handle validations
-      accountService.createGoogleAccount(this.googleAccount,this.file).then(resp => {
-        this.successmsg();
-        this.showGoogleModal = false;
-        this.googleAccount = {};
-        this.getGoogleAccounts();
-      }).catch(error=>{
+
+      accountService.createGoogleAccount(this.googleAccount, this.file).then(resp => {
+        this.handleGoogleSaveOrUpdateResult();
+      }).catch(error => {
         this.$toasted.show("fasd");
         // this.$toasted.show(accountExceptionHandler(error.response.data));
         console.log(error);
@@ -215,13 +273,13 @@ export default {
           accountMail: "",
           applicationName: "",
           isActive: true,
-          accountDetails:{
+          accountDetails: {
             apiKey: "",
             apiSecret: ""
           }
         };
         this.getZoomAccounts();
-      }).catch(error=>{
+      }).catch(error => {
         this.$toasted.show("fasd");
         // this.$toasted.show(accountExceptionHandler(error.response.data));
         console.log(error);
@@ -291,7 +349,7 @@ export default {
                   :sort-desc.sync="sortDesc"
                   :filter="filter"
                   :selectable="true"
-                  @row-dblclicked="handleRowClicked"
+                  @row-dblclicked="handleAccountSelected"
                   select-mode="single"
                   :filter-included-fields="filterOn"
                   @filtered="onFiltered"
@@ -377,9 +435,23 @@ export default {
                   aria-label="Upload"
               />
             </div>
+<!--            <div class="form-check form-check-primary mb-3">-->
+<!--              <label class="form-check-label" for="active-passive">-->
+<!--                Aktif/Pasif-->
+<!--              </label>-->
+<!--              <input-->
+<!--                  v-model="googleAccount.isActive"-->
+<!--                  class="form-check-input"-->
+<!--                  type="checkbox"-->
+<!--                  id="active-passive"-->
+<!--                  checked-->
+<!--              />-->
+
+<!--            </div>-->
             <div class="text-end">
+              <b-button variant="danger" id="req-btn-delete-event" @click="confirm">Sil</b-button>
               <b-button variant="light" @click="hideModal">Kapat</b-button>
-              <b-button   @click="saveGoogleAccount" variant="success" class="ms-1">Kaydet
+              <b-button @click="saveOrUpdateGoogleAccount" variant="success" class="ms-1">Kaydet
               </b-button>
             </div>
           </div>
@@ -405,68 +477,68 @@ export default {
                   type="text"
                   class="form-control"
               />
-              </div>
-            </div>
-            <div class="mb-3">
-              <label for="applicationName">Uygulama Adı</label>
-              <input
-                  id="applicationName"
-                  v-model="zoomAccount.applicationName"
-                  type="text"
-                  class="form-control"
-                  :class="{ 'is-invalid': submitted && $v.zoomAccount.applicationName.$error }"
-              />
-              <div
-                  v-if="submitted && !$v.zoomAccount.applicationName.required"
-                  class="invalid-feedback"
-              >
-                This value is required.
-              </div>
-            </div>
-            <div class="mb-3">
-              <label for="apiKey">Api Anahtarı</label>
-              <input
-                  id="apiKey"
-                  v-model="zoomAccount.accountDetails.apiKey"
-                  type="text"
-                  class="form-control"
-              />
-              </div>
-            </div>
-            <div class="mb-3">
-              <label for="apiSecret">Api Secret</label>
-              <input
-                  id="apiSecret"
-                  v-model="zoomAccount.accountDetails.apiSecret"
-                  type="text"
-                  class="form-control"
-                  :class="{ 'is-invalid': submitted && $v.zoomAccount.accountDetails.apiSecret.$error }"
-              />
-              <div
-                  v-if="submitted && !$v.zoomAccount.accountDetails.apiSecret.required"
-                  class="invalid-feedback"
-              >
-                This value is required.
-              </div>
-            </div>
-            <div class="mb-3">
-              <label
-                  class="form-check-label"
-                  for="active-passive-check-box"
-              >Aktif/Pasif</label>
-              <input
-                  id="active-passive-check-box"
-                  v-model="googleAccount.isActive"
-                  type="checkbox"
-                  class="form-check-input"
-              />
-            </div>
-            <div class="text-end">
-              <b-button variant="light" @click="hideModal">Kapat</b-button>
-              <b-button   @click="saveZoomAccount" variant="success" class="ms-1">Kaydet
-              </b-button>
             </div>
           </div>
+          <div class="mb-3">
+            <label for="applicationName">Uygulama Adı</label>
+            <input
+                id="applicationName"
+                v-model="zoomAccount.applicationName"
+                type="text"
+                class="form-control"
+                :class="{ 'is-invalid': submitted && $v.zoomAccount.applicationName.$error }"
+            />
+            <div
+                v-if="submitted && !$v.zoomAccount.applicationName.required"
+                class="invalid-feedback"
+            >
+              This value is required.
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="apiKey">Api Anahtarı</label>
+            <input
+                id="apiKey"
+                v-model="zoomAccount.accountDetails.apiKey"
+                type="text"
+                class="form-control"
+            />
+          </div>
+        </div>
+        <div class="mb-3">
+          <label for="apiSecret">Api Secret</label>
+          <input
+              id="apiSecret"
+              v-model="zoomAccount.accountDetails.apiSecret"
+              type="text"
+              class="form-control"
+              :class="{ 'is-invalid': submitted && $v.zoomAccount.accountDetails.apiSecret.$error }"
+          />
+          <div
+              v-if="submitted && !$v.zoomAccount.accountDetails.apiSecret.required"
+              class="invalid-feedback"
+          >
+            This value is required.
+          </div>
+        </div>
+        <div class="mb-3">
+          <label
+              class="form-check-label"
+              for="active-passive-check-box"
+          >Aktif/Pasif</label>
+          <input
+              id="active-passive-check-box"
+              v-model="googleAccount.isActive"
+              type="checkbox"
+              class="form-check-input"
+          />
+        </div>
+        <div class="text-end">
+          <b-button variant="light" @click="hideModal">Kapat</b-button>
+          <b-button @click="saveZoomAccount" variant="success" class="ms-1">Kaydet
+          </b-button>
+        </div>
+        </div>
         </div>
       </form>
     </b-modal>

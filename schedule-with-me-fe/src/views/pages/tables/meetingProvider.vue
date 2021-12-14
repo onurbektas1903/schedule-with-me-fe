@@ -104,9 +104,10 @@ export default {
       }
     },
     handleRowClicked(item, index, event) {
-      this.showModal = true;
+
       providerService.getProviderById(item.id).then(resp => {
         this.provider = resp;
+        this.showModal = true;
       })
     },
     addProvider() {

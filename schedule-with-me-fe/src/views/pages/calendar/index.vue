@@ -20,6 +20,7 @@ import {calendarComputed, calendarMethods} from "@/state/helpers";
 import Multiselect from "vue-multiselect";
 import KeycloakUserApi from "@/helpers/fakebackend/keycloak-user-api";
 import eventbus from "@/eventbus";
+import Footer from "@/components/footer";
 
 /**
  * Calendar component
@@ -29,7 +30,7 @@ export default {
     title: "Calendar",
     meta: [{name: "description", content: appConfig.description}],
   },
-  components: {FullCalendar, Layout, PageHeader, Multiselect},
+  components: {Footer, FullCalendar, Layout, PageHeader, Multiselect},
   data() {
     return {
       slotRequestModal: false,
@@ -46,11 +47,13 @@ export default {
         organizer: "",
         description: "",
         creator: "",
-        meeting: ""
+        meeting: "",
+        requestStatus: "",
+        meetingLink:""
       },
       providers: [],
       recipients: [],
-      slotRequests:[],
+      slotRequests: [],
       title: "Calendar",
       items: [
         {
@@ -84,7 +87,7 @@ export default {
         locale: "tr",
         droppable: true,
         eventResizableFromStart: true,
-        dateClick: this.dateClicked,
+        dateClick: this.addEvent,
         eventClick: this.eventClicked,
         eventsSet: this.handleEvents,
         dateSelection: this.dateRangeSelected,
@@ -93,11 +96,11 @@ export default {
         selectMirror: true,
         dayMaxEvents: true,
       },
+      isUserParticipant: false,
       currentEvents: [],
       showModal: false,
       modalTitle: "",
       showRecipientsModal: false,
-      eventModal: false,
       categories: categories,
       submitted: false,
       submit: false,
@@ -110,17 +113,25 @@ export default {
         description: "",
         recipients: [],
         meetingProvider: {},
+        slotRequests: [],
         start: "",
         end: "",
         category: "info",
         organizer: "",
         meetingURL: "",
-        changeSlotRequest: ""
-      },
-      editevent: {
-        editTitle: "",
-        editMeetingProvider: "",
-      },
+        changeSlotRequest: {
+          id: "",
+          title: "",
+          startDate: "",
+          endDate: "",
+          organizer: "",
+          description: "",
+          creator: "",
+          meeting: "",
+          requestStatus: "",
+          meetingLink:""
+        }
+      }
     };
   },
   validations: {
@@ -156,11 +167,28 @@ export default {
         api.removeAllEvents();
       }
     },
-    handleSlotRequetsApproved(slotRequest){
-      console.log(slotRequest);
+    handleSlotRequetsApproved(slotRequest) {
+      this.createSlotRequestApproval(slotRequest, true);
     },
-    handleSlotRequetsRejected(slotRequest){
-      console.log(slotRequest);
+    handleSlotRequetsRejected(slotRequest) {
+      this.createSlotRequestApproval(slotRequest, false);
+    },
+    createSlotRequestApproval(slotRequest, isApproved) {
+      slotRequest.meetingId = this.event.id
+      slotRequest.startDate = Date.parse(slotRequest.startDate);
+      slotRequest.endDate = Date.parse(slotRequest.endDate);
+      meetingService.createSlotRequestApproval(slotRequest, isApproved).then(result => {
+        this.event.slotRequests = this.event.slotRequests.map(req => {
+          if (req.id === result.id) {
+            return this.convertSlotRequestDTO(result);
+          } else {
+            return req;
+          }
+        });
+      });
+      let calendarApi = this.$refs.fullCalendar.getApi();
+      calendarApi.refetchEvents()
+      this.hideSlotListModal();
     },
     handleProviderFilterRemoved(e) {
       let api = this.$refs.fullCalendar.getApi();
@@ -213,25 +241,18 @@ export default {
      * Modal form submit
      */
     // eslint-disable-next-line no-unused-vars
-    handleSubmit(e) {
+    createOrUpdateMeeting(e) {
       this.submitted = true;
       // stop here if form is invalid
       this.$v.$touch();
       if (this.$v.$invalid) {
         return;
       } else {
-
         this.event.start = Date.parse(this.event.start);
         this.event.end = Date.parse(this.event.end);
         let calendarApi = this.newEventData.view.calendar;
-
         meetingService.createMeeting(this.event).then(response => {
-          this.currentEvents = calendarApi.addEvent({
-            id: response.id,
-            title: response.title,
-            start: response.start,
-            end: response.end
-          });
+          calendarApi.refetchEvents();
           this.successmsg();
         }).catch(reason => {
           //TODO handle errors
@@ -248,61 +269,67 @@ export default {
     },
     // eslint-disable-next-line no-unused-vars
     hideModal(e) {
+      this.$router.push({ name: 'home' });
       this.submitted = false;
       this.showModal = false;
       this.event = {};
     },
-
     hideSlotRequestModal(e) {
       this.slotRequestModal = false;
     },
-    /**
-     * Edit event modal submit
-     */
-    // eslint-disable-next-line no-unused-vars
-    editSubmit(e) {
-      this.submit = true;
-      const editTitle = this.editevent.editTitle;
-      const editmeetingProvider = this.editevent.editmeetingProvider;
-      this.edit.setProp("title", editTitle);
-      this.edit.setProp("classNames", editmeetingProvider);
-      this.successmsg();
-      this.eventModal = false;
-    },
     createSlotChangeRequest(e) {
       this.slotRequestModal = false;
-      this.changeSlotRequest.startDate = Date.parse(this.event.start);
-      this.event.start = Date.parse(this.event.start);
-      this.event.end = Date.parse(this.event.end);
-      this.changeSlotRequest.endDate = Date.parse(this.event.end);
+      this.changeSlotRequest.title = this.createChangeMailTitle();
+      this.changeSlotRequest.startDate = Date.parse(this.changeSlotRequest.startDate);
+      this.changeSlotRequest.endDate = Date.parse(this.changeSlotRequest.endDate);
       this.changeSlotRequest.creator = this.currentUser.email;
       this.changeSlotRequest.organizer = this.event.organizer;
       this.changeSlotRequest.meetingId = this.event.id
       this.changeSlotRequest.title = this.createChangeMailTitle();
-      this.changeSlotRequest.description = this.createChangeMailBody(this.changeSlotRequest.description);
+      this.changeSlotRequest.meetingLink = `http://localhost:9095/meeting/${this.event.id}`;
+      //TODO enuma al
+      this.changeSlotRequest.requestStatus = 'WAITING';
       meetingService.createChangeSlotRequest(this.changeSlotRequest).then(response => {
+
+        this.event.slotRequests.push(this.convertSlotRequestDTO(response));
+
         this.successmsg();
       }).catch(reason => {
         //TODO handle errors
         console.log(reason);
       });
     },
-
+    deleteSlotRequest(id){
+      meetingService.deleteSlotRequest(id).then(response => {
+        this.event.slotRequests = this.event.slotRequests.filter(sr => sr.id !== response.id );
+        this.hideSlotListModal();
+        console.log(response +" deleted");
+      })
+    },
+    deleteMeeting(id){
+      meetingService.deleteMeeting(id).then(response => {
+        let calendarApi = this.$refs.fullCalendar.getApi();
+        calendarApi.refetchEvents();
+        this.hideModal();
+      });
+    },
     /**
      * Delete event
      */
     deleteEvent() {
-      this.edit.remove();
-      this.eventModal = false;
+      //TODO remove event
     },
     /**
      * Modal open for add event
      */
-    dateClicked(info) {
+    addEvent(info) {
       this.newEventData = info;
+      this.event.id = '';
       this.event.start = info.dateStr.split('+')[0];
       this.event.end = info.dateStr.split('+')[0];
-      this.event.title = ""
+      this.event.title = '';
+      this.event.description = '';
+      this.event.meetingURL = '';
       this.event.organizer = this.currentUser.email;
       this.modalTitle = "Create Meeting"
       this.showModal = true;
@@ -328,7 +355,7 @@ export default {
       this.editEvent(info.event.id);
     },
     checkUserCanEdit() {
-      return this.currentUser && this.currentUser.roles.find(role => role !== 'STANDART_USER');
+      return this.currentUser && this.currentUser.roles.find(role => role !== 'STANDART_USER') || this.event.recipients.filter(value => value === this.currentUser.email);
     },
     checkUserCanAsk() {
       return this.currentUser && this.event.organizer !== this.user.email && this.event.id !== "";
@@ -352,39 +379,56 @@ export default {
               };
           this.modalTitle = "Edit Meeting"
           this.showModal = true;
+          this.isUserParticipant = this.event.recipients
+              .filter(recipient => recipient.name === this.currentUser.email).length === 1
         });
       }
     },
 
     createChangeMailTitle() {
       //TODO ingilizce hale getir
-      return 'Online Görüşme Tarih Değişim İsteği'
-    },
-    createChangeMailBody(description) {
-      let body = ` <p> ${new Date(this.event.start)} ve ${new Date(this.event.end)}   </p>
-                <p> ${description} </p>
-                 <p>http://localhost:9095/meeting/${this.event.id}</p>`
-      return body;
+      const start =  moment(this.changeSlotRequest.startDate).format(('DD-MM-YYYY hh:mm'));
+      const end =  moment(this.changeSlotRequest.endDate).format(('DD-MM-YYYY hh:mm'));
+      return `${start} ve ${end} Tarihleri için Değişiklik İsteği`;
     },
     closeModal() {
       this.eventModal = false;
     },
-    openSlotRequestModal() {
+    addSlotRequest: function () {
+
+
+      this.changeSlotRequest = {
+        id: "",
+        title: "",
+        startDate: "",
+        endDate: "",
+        organizer: "",
+        description: "",
+        creator: "",
+        meeting: "",
+        requestStatus: ""
+      };
       this.slotRequestModal = true;
+
     },
     openSlotListModal() {
-     meetingService.getSlotRequests(this.event.id).then(resp => {
-        this.slotRequests = resp.map(req => {
-          return {
-            id:req.id,
-            description: req.description,
-            startDate:moment(req.startDate).format().split('+')[0],
-            endDate:moment(req.endDate).format().split('+')[0],
-            creator:req.creator
-          }
-        });
-         this.slotRequestListModal = true;
+      this.slotRequestListModal = true;
+      this.event.slotRequests = this.event.slotRequests.map(req => {
+        return this.convertSlotRequestDTO(req);
       });
+    },
+    hideSlotListModal() {
+      this.slotRequestListModal = false;
+    },
+    convertSlotRequestDTO(slotReq) {
+      return {
+        id: slotReq.id,
+        description: slotReq.description,
+        startDate: moment(slotReq.startDate).format().split('+')[0],
+        endDate: moment(slotReq.endDate).format().split('+')[0],
+        requestStatus: slotReq.requestStatus,
+        creator: slotReq.creator
+      }
     },
     confirm() {
       Swal.fire({
@@ -470,7 +514,7 @@ export default {
         hide-footer
         centered
     >
-      <form @submit.prevent="handleSubmit">
+      <form @submit.prevent="createOrUpdateMeeting">
         <div class="row">
           <div class="col-12">
             <div class="mb-3">
@@ -624,81 +668,19 @@ export default {
         </div>
 
         <div class="text-end">
+          <b-button v-if="event.id !== '' && (currentUser.email === event.organizer || currentUser.roles.filter(value => value === 'STANDART_USER').length<=0)"
+                    variant="danger" id="btn-delete-meet-event" @click="deleteMeeting(event.id)"
+          >Sil
+          </b-button>
           <b-button variant="light" @click="hideModal">Close</b-button>
           <b-button type="submit" variant="success" class="ms-1">Create event</b-button>
-          <b-button v-if=" this.event.id != '' && this.currentUser.email !== this.event.organizer"
-                    @click="openSlotRequestModal" variant="success" class="ms-1">Tarih Değiştirme İsteği
-          </b-button>
-          <b-button v-if=" this.event.id != '' && this.currentUser.email === this.event.organizer"
+          <b-button v-if=" this.event.id != '' "
                     @click="openSlotListModal" variant="success" class="ms-1">Değişim Talepleri
           </b-button>
         </div>
       </form>
     </b-modal>
 
-    <!-- Edit Modal -->
-    <b-modal
-        v-model="eventModal"
-        title="Edit Event"
-        title-class="text-black font-18"
-        header-border-variant="py-3 px-4 border-bottom-0"
-        hide-footer
-        body-class="p-4"
-        centered
-    >
-      <form @submit.prevent="editSubmit">
-        <div class="row">
-          <div class="col-12">
-            <div class="mb-3">
-              <label for="title">Başlık</label>
-              <input
-                  id="name"
-                  v-model="editevent.editTitle"
-                  type="text"
-                  class="form-control"
-                  placeholder="Insert Event name"
-              />
-            </div>
-          </div>
-          <div class="col-12">
-            <div class="mb-3">
-              <label class="form-label">Konferans Sağlayıcı</label>
-              <select
-                  v-model="editevent.editmeetingProvider"
-                  class="form-control form-select"
-                  name="meetingProvider"
-              >
-                <option
-                    v-for="option in categories"
-                    :key="option.backgroundColor"
-                    :value="`${option.value}`"
-                >{{ option.name }}
-                </option
-                >
-              </select>
-            </div>
-          </div>
-        </div>
-        <div class="row mt-2">
-          <div class="col-6">
-            <b-button variant="danger" id="btn-delete-event" @click="confirm"
-            >Delete
-            </b-button
-            >
-          </div>
-          <div class="col-6 text-end">
-            <b-button
-                variant="light"
-                class="btn btn-light me-1"
-                @click="closeModal"
-            >Close
-            </b-button
-            >
-            <b-button variant="success" @click="editSubmit">Save</b-button>
-          </div>
-        </div>
-      </form>
-    </b-modal>
     <b-modal
         v-model="slotRequestModal"
         title="Tarih Değiştirme İsteği"
@@ -740,12 +722,12 @@ export default {
             <label class="form-label"
             >Başlangıç Tarihi</label>
             <b-form-input
-                v-model="changeSlotRequest.start"
+                v-model="changeSlotRequest.startDate"
                 type="datetime-local"
                 id="slotStart"
             ></b-form-input>
             <div
-                v-if="submitted && !$v.changeSlotRequest.start.required"
+                v-if="submitted && !$v.changeSlotRequest.startDate.required"
                 class="invalid-feedback"
             >
               This value is required.
@@ -757,21 +739,34 @@ export default {
             <label class="form-label"
             >Bitiş Tarihi</label>
             <b-form-input
-                v-model="changeSlotRequest.end"
+                v-model="changeSlotRequest.endDate"
                 type="datetime-local"
                 id="end"
             ></b-form-input>
             <div
-                v-if="submitted && !$v.changeSlotRequest.end.required"
+                v-if="submitted && !$v.changeSlotRequest.endDate.required"
                 class="invalid-feedback"
             >
               This value is required.
             </div>
           </div>
         </div>
+        <div class="row">
+          <div class="col-12">
+            <div class="mb-3">
+              <label for="slotRequestStatus">Statüs</label>
+              <textarea
+                  id="slotRequestStatus"
+                  v-model="changeSlotRequest.requestStatus"
+                  type="text"
+                  class="form-control"
+              />
+            </div>
+          </div>
+        </div>
         <div class="row mt-2">
           <div class="col-6">
-            <b-button variant="danger" id="btn-delete-event" @click="confirm"
+            <b-button variant="danger" id="req-btn-delete-event" @click="confirm"
             >Sil
             </b-button
             >
@@ -797,7 +792,7 @@ export default {
         hide-footer
         body-class="p-4"
         centered
-        size="lg"
+        size="xl"
     >
       <form>
         <div class="row">
@@ -808,24 +803,44 @@ export default {
               <tr>
                 <th>Kullanıcı adı</th>
                 <th>Başlangıç Tarihi</th>
-                <th >Bitiş Tarihi</th>
+                <th>Bitiş Tarihi</th>
+                <th>Statüs</th>
 
               </tr>
               </thead>
               <tbody>
-              <tr v-for="(slotRequest,index) in this.slotRequests" :key="slotRequest.id">
+              <tr v-for="(slotRequest,index) in this.event.slotRequests" :key="slotRequest.id">
                 <td><input class="form-control" v-model="slotRequest.creator"/></td>
                 <td><input class="form-control" v-model="slotRequest.startDate" type="datetime-local"/></td>
                 <td><input class="form-control" v-model="slotRequest.endDate" type="datetime-local"/></td>
-<!--                <b-form-input v-model="slotRequest.endDate" type="datetime-local"/>-->
-<!--                <td><input class="form-control" v-model="slotRequest.startDate"/></td>-->
-<!--                <td><input class="form-control" v-model="slotRequest.endDate"/></td>-->
-                <td><b-button variant="light" @click="handleSlotRequetsApproved(slotRequest)">Onayla</b-button></td>
-                <td><b-button variant="light" @click="handleSlotRequetsRejected(slotRequest)">Reddet</b-button></td>
+                <td><input class="form-control" v-model="slotRequest.requestStatus"/></td>
+                <td>
+                  <b-button v-if="currentUser.email !== event.organizer && slotRequest.requestStatus === 'WAITING'"
+                            variant="danger" id="btn-delete-event" @click="deleteSlotRequest(slotRequest.id)"
+                  >Sil
+                  </b-button>
+                </td>
+
+                <td>
+                  <b-button v-if="currentUser.email === event.organizer && slotRequest.requestStatus === 'WAITING'" variant="light"
+                            @click="handleSlotRequetsApproved(slotRequest)">Onayla
+                  </b-button>
+                </td>
+                <td>
+                  <b-button v-if="currentUser.email === event.organizer && slotRequest.requestStatus === 'WAITING'" variant="light"
+                            @click="handleSlotRequetsRejected(slotRequest)">Reddet
+                  </b-button>
+                </td>
 
               </tr>
               </tbody>
             </table>
+            <footer>
+              <b-button
+                  v-if=" this.event.id != '' && this.currentUser.email !== this.event.organizer && this.isUserParticipant"
+                  @click="addSlotRequest" variant="success" class="ms-1">Ekle
+              </b-button>
+            </footer>
           </div>
         </div>
       </form>

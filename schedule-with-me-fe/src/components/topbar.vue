@@ -50,12 +50,15 @@ export default {
       text: null,
       flag: null,
       value: null,
+      currentUser:"",
     };
   },
   mounted() {
     this.value = this.languages.find((x) => x.language === i18n.locale);
     this.text = this.value.title;
     this.flag = this.value.flag;
+    this.currentUser = JSON.parse(sessionStorage.getItem("authUser"));
+
   },
   methods: {
     initFullScreen() {
@@ -419,9 +422,8 @@ export default {
               src="@/assets/images/users/avatar-1.jpg"
               alt="Header Avatar"
             />
-            <span class="d-none d-xl-inline-block ms-1">{{
-              $t("navbar.dropdown.profile.text")
-            }}</span>
+<!--            <input v-model="currentUser.email"></input>-->
+            <span class="d-none d-xl-inline-block ms-1"> {{currentUser.email}}</span>
             <i class="mdi mdi-chevron-down d-none d-xl-inline-block"></i>
           </template>
 

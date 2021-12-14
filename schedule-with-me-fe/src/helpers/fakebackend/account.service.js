@@ -23,7 +23,9 @@ export const accountService = {
     updateGoogleAccountActivePassiveInfo,
     updateZoomAccountActivePassiveInfo,
     getActiveZoomAccounts,
-    getActiveGoogleAccount
+    getActiveGoogleAccount,
+    deleteGoogleAccount,
+    deleteZoomAccount
 };
 //TODO google-zoom servislerini ayır
 async function  createZoomAccount(account) {
@@ -138,14 +140,45 @@ async function getActiveGoogleAccount() {
 
     return response.data;
 }
-async function findGoogleAccountById(id) {
+async function deleteGoogleAccount(id) {
 
-    const response = await axiosRequest.get(
-        GOOGLE_API_GET_ALL_URL + `/${id}`,
+    const response = await axiosRequest.delete(
+        GOOGLE_API_BASE_URL + `/${id}`,
         {
             headers: {}
         }
     );
+
+    if (!response || !response.data){
+        return undefined;
+    }
+
+    return response.data;
+}
+async function deleteZoomAccount(id) {
+
+    const response = await axiosRequest.delete(
+        ZOOM_API_BASE_URL + `/${id}`,
+        {
+            headers: {}
+        }
+    );
+
+    if (!response || !response.data){
+        return undefined;
+    }
+
+    return response.data;
+}
+async function findGoogleAccountById(id) {
+
+    const response = await axiosRequest.get(
+        GOOGLE_API_BASE_URL + `/${id}`,
+        {
+            headers: {}
+        }
+    );
+    return response.data;
 }
 async function findZoomAccountById(id) {
 

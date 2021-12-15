@@ -8,8 +8,6 @@ import {accountService} from "@/helpers/fakebackend/account.service";
 import {required} from "vuelidate/lib/validators";
 import Swal from "sweetalert2";
 import {providers} from '../tables/dataAdvancedtable'
-import {accountExceptionHandler} from "@/views/pages/accounts/meetingAccountsErrorHandler";
-import {providerService} from "@/helpers/fakebackend/provider.service";
 
 /**
  * Datatable component
@@ -29,7 +27,6 @@ export default {
         id: "",
         accountMail: "",
         applicationName: "",
-        isActive: true,
         accountDetails: {
           adminUserEmail: "",
           fileName: ""
@@ -40,7 +37,6 @@ export default {
         id: "",
         accountMail: "",
         applicationName: "",
-        isActive: true,
         accountDetails: {
           apiKey: "",
           apiSecret: ""
@@ -90,10 +86,6 @@ export default {
         },
         {
           key: "applicationName",
-          sortable: true,
-        },
-        {
-          key: "isActive",
           sortable: true,
         }
       ],
@@ -197,7 +189,6 @@ export default {
             id: "",
             accountMail: "",
             applicationName: "",
-            isActive: true,
             accountDetails: {
               apiKey: "",
               apiSecret: ""
@@ -274,7 +265,6 @@ export default {
           id: "",
           accountMail: "",
           applicationName: "",
-          isActive: true,
           accountDetails: {
             apiKey: "",
             apiSecret: ""

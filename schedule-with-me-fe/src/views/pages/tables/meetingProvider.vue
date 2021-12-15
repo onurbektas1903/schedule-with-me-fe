@@ -9,6 +9,7 @@ import {providerService} from "@/helpers/fakebackend/provider.service";
 import {required} from "vuelidate/lib/validators";
 import Swal from "sweetalert2";
 import {accountService} from "@/helpers/fakebackend/account.service";
+import {meetingProviderExceptionHandler} from "@/views/pages/tables/meetingProviderErrorHandler";
 
 /**
  * Datatable component
@@ -115,6 +116,8 @@ export default {
         providerService.updateProviderActivePassiveInfo(this.selectedProvider.id,isActive).then(value => {
           this.successmsg();
           this.getProviders();
+        }).catch(error=>{
+          this.errormsg(meetingProviderExceptionHandler(error.response.data));
         });
 
     },
@@ -151,7 +154,10 @@ export default {
         ).then(result => {
         this.getProviders();
           console.log(result);
-        })
+        }).catch(error=>{
+            // this.$toasted.show(accountExceptionHandler(error.response.data));
+            this.errormsg(meetingProviderExceptionHandler(error.response.data));
+          });
 
     },
     getProviders() {
@@ -164,6 +170,16 @@ export default {
         position: "center",
         icon: "success",
         title: "İşlem başarıyla gerçekleşti",
+        showConfirmButton: false,
+        timer: 1000,
+      });
+    },
+    errormsg(errorMessage) {
+      Swal.fire({
+        position: "center",
+        icon: "error",
+        html: errorMessage,
+        title: "Hata Oluştu",
         showConfirmButton: false,
         timer: 1000,
       });

@@ -181,17 +181,13 @@ export default {
       slotRequest.startDate = Date.parse(slotRequest.startDate);
       slotRequest.endDate = Date.parse(slotRequest.endDate);
       meetingService.createSlotRequestApproval(slotRequest, isApproved).then(result => {
-        this.event.slotRequests = this.event.slotRequests.map(req => {
-          if (req.id === result.id) {
-            return this.convertSlotRequestDTO(result);
-          } else {
-            return req;
-          }
-        });
+        this.successmsg();
+        let calendarApi = this.$refs.fullCalendar.getApi();
+        calendarApi.refetchEvents();
+        this.hideSlotListModal();
+        this.hideModal();
       });
-      let calendarApi = this.$refs.fullCalendar.getApi();
-      calendarApi.refetchEvents()
-      this.hideSlotListModal();
+
     },
     handleProviderFilterRemoved(e) {
       let api = this.$refs.fullCalendar.getApi();
@@ -253,19 +249,36 @@ export default {
       } else {
         this.event.start = Date.parse(this.event.start);
         this.event.end = Date.parse(this.event.end);
-        let calendarApi = this.newEventData.view.calendar;
-        meetingService.createMeeting(this.event).then(response => {
-          calendarApi.refetchEvents();
-          this.successmsg();
-        }).catch(reason => {
-          //TODO handle errors
-          console.log(reason);
-        });
+        let calendarApi = this.$refs.fullCalendar.getApi();
+        if(this.event.id && this.event.id !== ""){
+          meetingService.updateMeeting(this.event).then(response => {
+            this.successmsg();
+            calendarApi.refetchEvents();
+
+            this.showModal = false;
+            this.event = {};
+            this.newEventData = {};
+          }).catch(reason => {
+            console.log(reason);
+          });
+
+        }else {
+          meetingService.createMeeting(this.event).then(response => {
+            this.successmsg();
+            calendarApi.refetchEvents();
+
+            this.showModal = false;
+            this.event = {};
+            this.newEventData = {};
+          }).catch(reason => {
+            //TODO handle errors
+            console.log(reason);
+          });
+        }
 
 
-        this.showModal = false;
-        this.event = {};
-        this.newEventData = {};
+
+
       }
       this.submitted = false;
       this.event = {};
@@ -282,7 +295,6 @@ export default {
       this.slotRequestModal = false;
     },
     createSlotChangeRequest(e) {
-      this.slotRequestModal = false;
       this.changeSlotRequest.title = this.createChangeMailTitle();
       this.changeSlotRequest.startDate = Date.parse(this.changeSlotRequest.startDate);
       this.changeSlotRequest.endDate = Date.parse(this.changeSlotRequest.endDate);
@@ -294,10 +306,9 @@ export default {
       //TODO enuma al
       this.changeSlotRequest.requestStatus = 'WAITING';
       meetingService.createChangeSlotRequest(this.changeSlotRequest).then(response => {
-
-        this.event.slotRequests.push(this.convertSlotRequestDTO(response));
-
         this.successmsg();
+        this.slotRequestModal = false;
+        this.event.slotRequests.push(this.convertSlotRequestDTO(response));
       }).catch(reason => {
         //TODO handle errors
         console.log(reason);
@@ -343,6 +354,7 @@ export default {
       this.event.description = '';
       this.event.meetingURL = '';
       this.event.organizer = this.currentUser.email;
+      this.event.recipients=[];
     },
     getProviders() {
       providerService.getAll().then(resp => {
@@ -394,10 +406,8 @@ export default {
 
 
         this.getProviders();
-        // this.edit = info.event;
         this.eventEditable = info.event.start >= new Date();
         meetingService.getMeetingById(info.event.id).then(resp => {
-          console.log(this.providers);
           this.event = resp;
           this.event.start = moment(resp.start).format().split('+')[0];
           this.event.end = moment(resp.end).format().split('+')[0];
@@ -522,7 +532,7 @@ export default {
         icon: "error",
         title: msg,
         showConfirmButton: false,
-        timer: 1000,
+        timer: 1200,
       });
     },
   }
@@ -734,7 +744,7 @@ export default {
           </b-button>
           <b-button variant="light" @click="hideModal">Kapat</b-button>
           <b-button  v-if="this.eventEditable" type="submit" variant="success" class="ms-1">Kaydet</b-button>
-          <b-button v-if=" this.event.id != '' "
+          <b-button v-if=" this.event.id !== '' "
                     @click="openSlotListModal" variant="success" class="ms-1">Değişim Talepleri
           </b-button>
         </div>
@@ -751,19 +761,6 @@ export default {
         centered
     >
       <form>
-        <div class="row">
-          <div class="col-12">
-            <div class="mb-3">
-              <label for="slotTitle">Başlık</label>
-              <textarea
-                  id="slotTitle"
-                  v-model="changeSlotRequest.title"
-                  type="text"
-                  class="form-control"
-              />
-            </div>
-          </div>
-        </div>
         <div class="row">
           <div class="col-12">
             <div class="mb-3">
@@ -815,11 +812,12 @@ export default {
           <div class="col-12">
             <div class="mb-3">
               <label for="slotRequestStatus">Statüs</label>
-              <textarea
+              <input
                   id="slotRequestStatus"
                   v-model="changeSlotRequest.requestStatus"
                   type="text"
                   class="form-control"
+                  :readonly="true"
               />
             </div>
           </div>
@@ -897,7 +895,7 @@ export default {
             </table>
             <footer>
               <b-button
-                  v-if=" this.event.id != '' && this.currentUser.email !== this.event.organizer && this.isUserParticipant"
+                  v-if=" this.event.id !== '' && this.currentUser.email !== this.event.organizer && this.isUserParticipant"
                   @click="addSlotRequest" variant="success" class="ms-1">Ekle
               </b-button>
             </footer>

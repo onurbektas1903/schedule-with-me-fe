@@ -15,12 +15,23 @@ export const meetingService = {
     getSlotRequests,
     createSlotRequestApproval,
     deleteSlotRequest,
-    deleteMeeting
+    deleteMeeting,
+    updateMeeting
 };
 
 async function  createMeeting(meeting) {
    const response = await axiosRequest.post(
        MEETING_API_BASE_URL,
+        meeting,
+        {
+            headers: {}
+        }
+    );
+   return response.data;
+}
+async function  updateMeeting(meeting) {
+   const response = await axiosRequest.put(
+       `${MEETING_API_BASE_URL}/${meeting.id}`,
         meeting,
         {
             headers: {}

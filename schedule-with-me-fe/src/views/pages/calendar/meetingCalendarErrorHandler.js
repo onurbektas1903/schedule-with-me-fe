@@ -1,10 +1,11 @@
 import {GENERAL_ERRORS} from "@/constants/errors/errorMessages";
 
-export const meetingProviderExceptionHandler = (errorMessage) => {
+export const accountExceptionHandler = (errorMessage) => {
     const errorCode = errorMessage.errorCode;
     let fields = errorMessage.errorList;
     let errMsg;
     switch (errorCode) {
+
         case GENERAL_ERRORS.NOT_UNIQUE_EXCEPTION:
             errMsg = '1den fazla oluşturulamaz';
             break;

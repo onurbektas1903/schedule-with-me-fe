@@ -13,7 +13,6 @@ import Layout from "../../layouts/main";
 import PageHeader from "@/components/page-header";
 import appConfig from "@/app.config";
 import {categories} from "./data-calendar";
-// import { calendarEvents, categories } from "./data-calendar";
 import {meetingService} from "@/helpers/fakebackend/meeting.service";
 import {providerService} from "@/helpers/fakebackend/provider.service";
 import {calendarComputed, calendarMethods} from "@/state/helpers";
@@ -36,11 +35,13 @@ export default {
       slotRequestModal: false,
       slotRequestListModal: false,
       param_id: this.$route.params.id,
+      showSearchModal: false,
+      searchTitle: "Arama",
       eventEditable: true,
       providerFilter: "",
       currentUser: {},
-      userCanEdit:true,
-      userCanView:true,
+      userCanEdit: true,
+      userCanView: true,
       keycloakUserApi: new KeycloakUserApi(),
       changeSlotRequest: {
         id: "",
@@ -52,9 +53,10 @@ export default {
         creator: "",
         meeting: "",
         requestStatus: "",
-        meetingLink:""
+        meetingLink: ""
       },
       providers: [],
+      recipientFilter:"",
       recipients: [],
       slotRequests: [],
       title: "Calendar",
@@ -70,10 +72,29 @@ export default {
       calEvents: [],
       // calendarEvents: this.EVENTS,
       calendarOptions: {
+        customButtons: {
+          searchButton: {
+            text: 'Ara',
+            click: this.openSearchModal,
+          },
+          nextSearchButton: {
+            text: '>>',
+            click: this.nextSearchButtonClicked,
+          },
+          previousSearchButton: {
+            text: '<<',
+            click: this.previousSearchButtonClicked,
+          }
+        },
+        views:{
+          listYear: {
+             duration: {years: 2}
+          }
+        },
         headerToolbar: {
           left: "prev,next today",
           center: "title",
-          right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
+          right: "dayGridMonth,timeGridWeek,timeGridDay,listYear",
         },
         plugins: [
           dayGridPlugin,
@@ -82,6 +103,7 @@ export default {
           bootstrapPlugin,
           listPlugin,
         ],
+        viewDidMount: this.handleEventViewChanged,
         slotDuration: '00:15:00',
         initialView: "dayGridMonth",
         themeSystem: "bootstrap",
@@ -93,7 +115,6 @@ export default {
         dateClick: this.addEvent,
         eventClick: this.handleEventSelected,
         eventsSet: this.handleEvents,
-        dateSelection: this.dateRangeSelected,
         weekends: true,
         selectable: true,
         selectMirror: true,
@@ -132,7 +153,16 @@ export default {
           creator: "",
           meeting: "",
           requestStatus: "",
-          meetingLink:""
+          meetingLink: ""
+        }
+      },
+      searchParam: {
+        title: null,
+        description: null,
+        recipient:null,
+        queryObject: {
+          pageSize:10,
+          pageNumber:1
         }
       }
     };
@@ -155,7 +185,7 @@ export default {
       let recipients = [];
       users.forEach(user => {
         recipients.push({
-          id: user.id,
+          id: null,
           name: user.email
         });
         this.recipients = recipients;
@@ -175,6 +205,17 @@ export default {
     },
     handleSlotRequetsRejected(slotRequest) {
       this.createSlotRequestApproval(slotRequest, false);
+    },
+    nextSearchButtonClicked(){
+      this.searchParam.queryObject.pageNumber++;
+      this.handleSearch();
+    },
+    previousSearchButtonClicked(){
+      this.searchParam.queryObject.pageNumber--;
+      this.handleSearch();
+    },
+    openSearchModal() {
+      this.showSearchModal = true;
     },
     createSlotRequestApproval(slotRequest, isApproved) {
       slotRequest.meetingId = this.event.id
@@ -206,6 +247,45 @@ export default {
         });
         console.log(payload);
       })
+    },
+    handleEventViewChanged(obj) {
+      if (obj.view.type === 'listYear') {
+        this.searchParam.queryObject.pageNumber = 1;
+        this.calendarOptions.headerToolbar = {
+          left: "searchButton",
+          center: "title",
+          right: "dayGridMonth,timeGridWeek,timeGridDay listYear",
+        };
+      } else {
+        this.calendarOptions.headerToolbar = {
+          left: "prev,next today",
+          center: "title",
+          right: "dayGridMonth,timeGridWeek,timeGridDay,listYear",
+        }
+      }
+    },
+    handleSearchRecipientSelected(e){
+      this.searchParam.recipient = e.name;
+    },
+    handleSearch() {
+      meetingService.searchMeetings(this.searchParam).then(resp => {
+        let calendarApi = this.$refs.fullCalendar.getApi();
+        calendarApi.removeAllEvents();
+        resp.forEach(event =>{
+          calendarApi.addEvent({
+            id: event.id,
+            title: event.title,
+            start: event.start,
+            end: event.end
+          })
+        });
+        this.calendarOptions.headerToolbar = {
+          left: "searchButton previousSearchButton nextSearchButton",
+          center: "title",
+          right: "dayGridMonth,timeGridWeek,timeGridDay listYear",
+        };
+        this.showSearchModal=false;
+      });
     },
     getEvents: function (info, successCallback, failureCallback) {
       meetingService.getMeetingsBtwDates(info.start.valueOf(), info.end.valueOf())
@@ -250,7 +330,7 @@ export default {
         this.event.start = Date.parse(this.event.start);
         this.event.end = Date.parse(this.event.end);
         let calendarApi = this.$refs.fullCalendar.getApi();
-        if(this.event.id && this.event.id !== ""){
+        if (this.event.id && this.event.id !== "") {
           meetingService.updateMeeting(this.event).then(response => {
             this.successmsg();
             calendarApi.refetchEvents();
@@ -262,7 +342,7 @@ export default {
             console.log(reason);
           });
 
-        }else {
+        } else {
           meetingService.createMeeting(this.event).then(response => {
             this.successmsg();
             calendarApi.refetchEvents();
@@ -277,15 +357,13 @@ export default {
         }
 
 
-
-
       }
       this.submitted = false;
       this.event = {};
     },
     // eslint-disable-next-line no-unused-vars
     hideModal(e) {
-      this.$router.push({ name: 'home' });
+      this.$router.push({name: 'home'});
       this.submitted = false;
       this.showModal = false;
       this.eventEditable = false;
@@ -314,14 +392,14 @@ export default {
         console.log(reason);
       });
     },
-    deleteSlotRequest(id){
+    deleteSlotRequest(id) {
       meetingService.deleteSlotRequest(id).then(response => {
-        this.event.slotRequests = this.event.slotRequests.filter(sr => sr.id !== response.id );
+        this.event.slotRequests = this.event.slotRequests.filter(sr => sr.id !== response.id);
         this.hideSlotListModal();
-        console.log(response +" deleted");
+        console.log(response + " deleted");
       })
     },
-    deleteMeeting(id){
+    deleteMeeting(id) {
       meetingService.deleteMeeting(id).then(response => {
         Swal.fire("Silindi!", "Görüşme başarıyla iptal edildi.", "success");
 
@@ -335,7 +413,7 @@ export default {
      */
     addEvent(info) {
 
-      if(info.date < new Date()){
+      if (info.date < new Date()) {
         this.errormsg('Geçmişe yönelik görüşme oluşturulamaz');
         return;
       }
@@ -354,7 +432,7 @@ export default {
       this.event.description = '';
       this.event.meetingURL = '';
       this.event.organizer = this.currentUser.email;
-      this.event.recipients=[];
+      this.event.recipients = [];
     },
     getProviders() {
       providerService.getAll().then(resp => {
@@ -391,49 +469,50 @@ export default {
           || this.event.organizer === this.currentUser.email);
       this.userCanView = this.userCanEdit || this.isUserParticipant
     },
-    isUserRecipient(){
+    isUserRecipient() {
       let recipients = this.event.recipients.filter(recipient => recipient.name === this.currentUser.email);
-      return recipients &&  recipients.length >0
+      return recipients && recipients.length > 0
     },
-    isUserOrganizerOrAdmin(){
+    isUserOrganizerOrAdmin() {
       let role = this.currentUser.roles.find(role => role === 'ADMIN' || role === 'ORGANIZER');
-      return  role && role.length >0;
+      return role && role.length > 0;
     },
     checkUserCanAsk() {
       return this.currentUser && this.event.organizer !== this.user.email && this.event.id !== "";
     },
     handleEventSelected(info) {
+      const id = info && info.event ? info.event.id : info;
 
+      // this.getProviders();
+      meetingService.getMeetingById(id).then(resp => {
+        this.eventEditable = info && info.event ? info.event.start >= new Date() : true;
 
-        this.getProviders();
-        this.eventEditable = info.event.start >= new Date();
-        meetingService.getMeetingById(info.event.id).then(resp => {
-          this.event = resp;
-          this.event.start = moment(resp.start).format().split('+')[0];
-          this.event.end = moment(resp.end).format().split('+')[0];
-          this.event.changeSlotRequest = {};
-          this.event.meetingProvider =
-              {
-                id: resp.meetingProvider.id,
-                meetingProviderType: resp.meetingProvider.meetingProviderType,
-                conferenceType: resp.meetingProvider.conferenceType,
-                name: resp.meetingProvider.name
-              };
-          this.modalTitle = "Güncelle"
+        this.event = resp;
+        this.event.start = moment(resp.start).format().split('+')[0];
+        this.event.end = moment(resp.end).format().split('+')[0];
+        this.event.changeSlotRequest = {};
+        this.event.meetingProvider =
+            {
+              id: resp.meetingProvider.id,
+              meetingProviderType: resp.meetingProvider.meetingProviderType,
+              conferenceType: resp.meetingProvider.conferenceType,
+              name: resp.meetingProvider.name
+            };
+        this.modalTitle = "Güncelle"
 
-          this.setUserPermissions();
-          if(this.userCanView){
-            this.showModal = true;
-          }else{
-            this.setEventDefault();
-          }
-        });
-      },
+        this.setUserPermissions();
+        if (this.userCanView) {
+          this.showModal = true;
+        } else {
+          this.setEventDefault();
+        }
+      });
+    },
 
     createChangeMailTitle() {
       //TODO ingilizce hale getir
-      const start =  moment(this.changeSlotRequest.startDate).format(('DD-MM-YYYY hh:mm'));
-      const end =  moment(this.changeSlotRequest.endDate).format(('DD-MM-YYYY hh:mm'));
+      const start = moment(this.changeSlotRequest.startDate).format(('DD-MM-YYYY hh:mm'));
+      const end = moment(this.changeSlotRequest.endDate).format(('DD-MM-YYYY hh:mm'));
       return `${start} ve ${end} Tarihleri için Değişiklik İsteği`;
     },
     closeModal() {
@@ -499,7 +578,7 @@ export default {
         confirmButtonColor: "#34c38f",
         cancelButtonColor: "#f46a6a",
         confirmButtonText: "Evet!",
-        cancelButtonText:"Vazgeç"
+        cancelButtonText: "Vazgeç"
       }).then((result) => {
         if (result.value) {
           this.deleteMeeting(eventId);
@@ -613,7 +692,6 @@ export default {
                   type="text"
                   class="form-control"
                   placeholder="Açıklama Ekle"
-                  :class="{ 'is-invalid': submitted && $v.event.description.$error }"
               />
               <div
                   v-if="submitted && !$v.event.description.required"
@@ -693,7 +771,7 @@ export default {
             <div class="mb-3">
               <label>Katılımcılar</label>
               <multiselect
-                  :readonly = !this.eventEditable
+                  :readonly=!this.eventEditable
                   v-model="event.recipients"
                   :options="this.recipients"
                   track-by="name"
@@ -738,12 +816,13 @@ export default {
         </div>
 
         <div class="text-end">
-          <b-button v-if="this.eventEditable && event.id !== '' && (currentUser.email === event.organizer || currentUser.roles.filter(value => value === 'STANDART_USER').length<=0)"
-                    variant="danger" id="btn-delete-meet-event" @click="confirMeet(event.id)"
+          <b-button
+              v-if="this.eventEditable && event.id !== '' && (currentUser.email === event.organizer || currentUser.roles.filter(value => value === 'STANDART_USER').length<=0)"
+              variant="danger" id="btn-delete-meet-event" @click="confirMeet(event.id)"
           >Sil
           </b-button>
           <b-button variant="light" @click="hideModal">Kapat</b-button>
-          <b-button  v-if="this.eventEditable" type="submit" variant="success" class="ms-1">Kaydet</b-button>
+          <b-button v-if="this.eventEditable" type="submit" variant="success" class="ms-1">Kaydet</b-button>
           <b-button v-if=" this.event.id !== '' "
                     @click="openSlotListModal" variant="success" class="ms-1">Değişim Talepleri
           </b-button>
@@ -880,12 +959,14 @@ export default {
                 </td>
 
                 <td>
-                  <b-button v-if="currentUser.email === event.organizer && slotRequest.requestStatus === 'WAITING'" variant="light"
+                  <b-button v-if="currentUser.email === event.organizer && slotRequest.requestStatus === 'WAITING'"
+                            variant="light"
                             @click="handleSlotRequetsApproved(slotRequest)">Onayla
                   </b-button>
                 </td>
                 <td>
-                  <b-button v-if="currentUser.email === event.organizer && slotRequest.requestStatus === 'WAITING'" variant="light"
+                  <b-button v-if="currentUser.email === event.organizer && slotRequest.requestStatus === 'WAITING'"
+                            variant="light"
                             @click="handleSlotRequetsRejected(slotRequest)">Reddet
                   </b-button>
                 </td>
@@ -938,6 +1019,87 @@ export default {
               </div>
             </table>
           </div>
+        </div>
+      </form>
+    </b-modal>
+    <b-modal
+        v-model="showSearchModal"
+        :title="searchTitle"
+        title-class="text-black font-18"
+        header-class="py-3 px-4 border-bottom-0"
+        body-class="p-4"
+        hide-footer
+        centered
+    >
+      <form autocomplete="off">
+        <div class="row">
+          <div class="col-12">
+            <div class="mb-3">
+              <label for="title">Başlık</label>
+              <input
+                  id="search-title"
+                  v-model="searchParam.title"
+                  type="text"
+                  class="form-control"
+              />
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="mb-3">
+              <label for="title">Açıklama</label>
+              <textarea
+                  id="search-description"
+                  v-model="searchParam.description"
+                  type="text"
+                  class="form-control"
+              />
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="mb-3">
+              <label class="form-label"
+              >Başlangıç Tarihi</label>
+              <b-form-input
+                  v-model="searchParam.start"
+                  type="datetime-local"
+                  id="start"
+              ></b-form-input>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="mb-3">
+              <label class="form-label"
+              >Bitiş Tarihi</label>
+              <b-form-input
+                  v-model="searchParam.end"
+                  type="datetime-local"
+                  id="end"
+              ></b-form-input>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="mb-3">
+              <label>Katılımcılar</label>
+              <multiselect
+                  :multiple = false
+                  :readonly=!this.eventEditable
+                  :options="this.recipients"
+                  v-model="recipientFilter"
+                  @select="this.handleSearchRecipientSelected"
+                  track-by="name"
+                  label="name"
+                  value ="name"
+                  placeholder="Katılımcı Ekle"
+              ></multiselect>
+
+            </div>
+          </div>
+        </div>
+
+        <div class="text-end">
+          <b-button variant="light" @click="hideModal">Kapat</b-button>
+          <b-button @click="handleSearch" variant="success" class="ms-1">Arama Başlat</b-button>
         </div>
       </form>
     </b-modal>

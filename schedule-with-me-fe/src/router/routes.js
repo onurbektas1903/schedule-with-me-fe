@@ -86,12 +86,12 @@ export default [{
         meta: {
             authRequired: false,
         },
-        component: () => import('../views/pages/calendar/index')
+        component: () => import('../views/pages/calendar/meetingCalendar')
     },
     {
         path: '/meeting/:id',
         name: 'editMeet',
-        component: () => import('../views/pages/calendar/index')
+        component: () => import('../views/pages/calendar/meetingCalendar')
     },
     {
         path: '/apps/calendar',
@@ -99,7 +99,7 @@ export default [{
         meta: {
             authRequired: false,
         },
-        component: () => import('../views/pages/calendar/index')
+        component: () => import('../views/pages/calendar/meetingCalendar')
     },
     {
         path: '/apps/chat',

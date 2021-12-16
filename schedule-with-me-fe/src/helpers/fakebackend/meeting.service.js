@@ -2,7 +2,7 @@ import AxiosRequest from "@/helpers/axios/AxiosRequest";
 import {
     MEETING_API_BASE_URL,
     MEETING_API_GET_ALL_SLOTS_URL,
-    MEETING_API_GET_ALL_URL,
+    MEETING_API_GET_ALL_URL, MEETING_API_SEARCH_ALL_URL,
     MEETING_SLOT_URL
 } from "../../constants/urls/meetingEndpoints";
 const axiosRequest = new AxiosRequest("http://localhost:8080");
@@ -16,13 +16,24 @@ export const meetingService = {
     createSlotRequestApproval,
     deleteSlotRequest,
     deleteMeeting,
-    updateMeeting
+    updateMeeting,
+    searchMeetings
 };
 
 async function  createMeeting(meeting) {
    const response = await axiosRequest.post(
        MEETING_API_BASE_URL,
         meeting,
+        {
+            headers: {}
+        }
+    );
+   return response.data;
+}
+async function  searchMeetings(queryObject) {
+   const response = await axiosRequest.post(
+       MEETING_API_SEARCH_ALL_URL,
+       queryObject,
         {
             headers: {}
         }

@@ -6,10 +6,11 @@ import Multiselect from "vue-multiselect";
 
 import {providers, conferenceTypes} from "./dataAdvancedtable";
 import {providerService} from "@/helpers/fakebackend/provider.service";
-import {required} from "vuelidate/lib/validators";
+import { required, minLength, email, sameAs } from "vuelidate/lib/validators";
 import Swal from "sweetalert2";
 import {accountService} from "@/helpers/fakebackend/account.service";
 import {meetingProviderExceptionHandler} from "@/views/pages/tables/meetingProviderErrorHandler";
+import KeycloakUserApi from "@/helpers/fakebackend/keycloak-user-api";
 
 /**
  * Datatable component
@@ -24,9 +25,12 @@ export default {
       file: '',
       meetingAccounts: [],
       selectedProvider: {
-        id:"",
-        isActive:""
+        id: "",
+        isActive: ""
       },
+      keycloakUserApi: new KeycloakUserApi(),
+      groups: [],
+      selectedGroup:{},
       showModal: false,
       showAccountsModal: false,
       showAccountsWithFileModal: false,
@@ -38,8 +42,9 @@ export default {
         id: "",
         name: "",
         meetingProviderType: "",
-        providerAccounts: [],
+        accounts: [],
         conferenceType: "",
+        userRoleGroup:"",
         isActive: ""
       },
       validations: {
@@ -89,52 +94,80 @@ export default {
   },
   mounted() {
     // Set the initial number of items
-   this.getProviders();
+    this.getProviders();
+    this.getAllGroups();
     this.totalRows = this.items.length;
   },
   methods: {
-    handleProviderTypeSelected(e){
+    handleProviderTypeSelected() {
       this.meetingAccounts = [];
-      switch (this.provider.meetingProviderType){
+      switch (this.provider.meetingProviderType) {
         case 'ZOOM': {
-          accountService.getActiveZoomAccounts().then(resp => {
+          accountService.getZoomAccounts(this.provider.id).then(resp => {
             this.meetingAccounts = resp;
+                // resp.map(account=>{
+                //     return {
+                //               key:account.id,
+                //               value:account.accountMail
+                //            }
+                // })
           });
           break;
         }
         case 'GOOGLE': {
           this.provider.conferenceType = 'SINGLE';
-          accountService.getActiveGoogleAccount().then(resp => {
-            this.meetingAccounts.push(resp);
+          accountService.getGoogleAccounts().then(resp => {
+            this.meetingAccounts = resp ;
           });
           break;
         }
       }
     },
-    activateDeactivateProvider(isActive){
-
-        providerService.updateProviderActivePassiveInfo(this.selectedProvider.id,isActive).then(value => {
-          this.successmsg();
-          this.getProviders();
-        }).catch(error=>{
-          this.errormsg(meetingProviderExceptionHandler(error.response.data));
+    getAllGroups() {
+      this.keycloakUserApi.getAllRoleGroups().then(groups => {
+        let groupList = [];
+        console.log(groups);
+        groups.forEach(group => {
+          groupList.push(group.name);
+          this.groups = groupList;
         });
+      });
+    },
+    activateDeactivateProvider(isActive) {
+
+      providerService.updateProviderActivePassiveInfo(this.selectedProvider.id, isActive).then(value => {
+        this.successmsg();
+        this.getProviders();
+      }).catch(error => {
+        this.errormsg(meetingProviderExceptionHandler(error.response.data));
+      });
 
     },
-    handleProviderSelected(item){
+    handleProviderSelected(item) {
       this.selectedProvider = item;
     },
     handleProviderEdit(item) {
 
       providerService.getProviderById(item.id).then(resp => {
+        let account = [];
+        if(resp.accounts){
+          for (const [key, value] of Object.entries(resp.accounts)) {
+            account.push({id:key,accountMail:value})
+          }
+        }
+
         this.provider = resp;
+        this.provider.accounts = account;
+        this.userRoleGroup = resp.userRoleGroup
         this.showModal = true;
+        this.handleProviderTypeSelected();
       })
     },
-    addProvider() {
+    handleAddProvider() {
       this.showModal = true;
       this.meetingAccounts = [];
       this.provider = {};
+      this.provider.isActive = true;
     },
     editProvider() {
       this.showModal = true;
@@ -145,24 +178,70 @@ export default {
       this.showModal = false;
       this.provider = {};
     },
-    createOrUpdateProvider(provider) {
-      // let accounts =[];
-        // provider.providerAccounts.forEach(value => accounts.push({id:value.id}));
-      // provider.providerAccounts = accounts;
-          providerService.createMeetingProvider(
-            provider
-        ).then(result => {
+    createOrUpdateProvider() {
+      if(this.provider.id && this.provider.id !== ''){
+        this.updateProvider(this.provider);
+      }else{
+        this.saveProvider(this.provider);
+      }
+    },
+    saveProvider(){
+     this.mapAccounts();
+      providerService.createMeetingProvider(
+          this.provider
+      ).then(result => {
+        this.showModal = false;
+        this.successmsg();
         this.getProviders();
-          console.log(result);
-        }).catch(error=>{
-            // this.$toasted.show(accountExceptionHandler(error.response.data));
-            this.errormsg(meetingProviderExceptionHandler(error.response.data));
-          });
+      }).catch(error => {
+        this.errormsg(meetingProviderExceptionHandler(error.response.data));
+      });
+    },
+    mapAccounts(){
+      const accountMap = Object.create(null);
+      this.provider.accounts.forEach(account => {
+        accountMap[account.id] = account.accountMail;
+      });
+      this.provider.accounts =accountMap;
+    },
+    updateProvider(){
+      this.mapAccounts();
+      providerService.updateProvider(this.provider.id,
+          this.provider
+      ).then(result => {
+        this.showModal = false;
+        this.successmsg();
+        this.getProviders();
+      }).catch(error => {
+        this.errormsg(meetingProviderExceptionHandler(error.response.data));
+      });
+    },
+    deleteProvider() {
+      providerService.deleteProvider(this.provider.id).then(value => {
+        this.showModal = false;
+        this.successmsg();
+        this.getProviders();
 
+      });
     },
     getProviders() {
       providerService.getAll().then(value => {
         this.tableData = value;
+      });
+    },
+    confirm() {
+      Swal.fire({
+        title: "Emin misiniz?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#34c38f",
+        cancelButtonColor: "#f46a6a",
+        confirmButtonText: "Evet!",
+        cancelButtonText: "Hayır"
+      }).then((result) => {
+        if (result.value) {
+          this.deleteProvider();
+        }
       });
     },
     successmsg() {
@@ -190,31 +269,8 @@ export default {
       this.currentPage = 1;
     },
     handleSubmit(e) {
-      //TODO handle validations
       this.submitted = true;
-      // this.$v.$touch();
-      // if (this.$v.$invalid) {
-      //   return;
-      // } else {
-      const name = this.provider.name;
-      const meetingProviderType = this.provider.meetingProviderType;
-      const providerAccounts = this.provider.providerAccounts;
-      const conferenceType = this.provider.conferenceType;
-      const provider = {
-        name,
-        meetingProviderType,
-        providerAccounts,
-        conferenceType,
-        isActive:true
-      };
-      this.createOrUpdateProvider(
-          provider
-      );
-      this.successmsg();
-      this.showModal = false;
-      this.newEventData = {};
-      this.submitted = false;
-      this.event = {};
+      this.createOrUpdateProvider();
     }
   },
 };
@@ -231,16 +287,20 @@ export default {
             <div class="row mt-4" id="datatable_wrapper">
               <div class="col-sm-12 col-md-6">
                 <div id="tickets-table_length" class="dataTables_length">
-                  <b-button variant="light" @click="addProvider">Konferans Sağlayıcı Ekle</b-button>
+                  <b-button variant="light" @click="handleAddProvider">Konferans Sağlayıcı Ekle</b-button>
                 </div>
                 <div class="col-sm-12 col-md-6">
                   <div id="active-id" class="dataTables_length">
-                    <b-button v-if="!selectedProvider.isActive" variant="light" @click="activateDeactivateProvider(true)">Aktif Yap</b-button>
+                    <b-button v-if="!selectedProvider.isActive" variant="light"
+                              @click="activateDeactivateProvider(true)">Aktif Yap
+                    </b-button>
                   </div>
                 </div>
                 <div class="col-sm-12 col-md-6">
                   <div id="passive-id" class="dataTables_length">
-                    <b-button v-if="selectedProvider.isActive" variant="light" @click="activateDeactivateProvider(false)">Pasif Yap</b-button>
+                    <b-button v-if="selectedProvider.isActive" variant="light"
+                              @click="activateDeactivateProvider(false)">Pasif Yap
+                    </b-button>
                   </div>
                 </div>
               </div>
@@ -323,33 +383,7 @@ export default {
                   type="text"
                   class="form-control"
                   placeholder="Sağlayıcı Adı Ekle"
-                  :class="{ 'is-invalid': submitted && $v.provider.name.$error }"
               />
-              <div
-                  v-if="submitted && !$v.provider.name.required"
-                  class="invalid-feedback"
-              >
-                This value is required.
-              </div>
-            </div>
-          </div>
-          <div class="col-12">
-            <div class="mb-3">
-              <label for="name">Açıklama</label>
-              <textarea
-                  id="description"
-                  v-model="provider.description"
-                  type="text"
-                  class="form-control"
-                  placeholder="Açıklama Ekle"
-                  :class="{ 'is-invalid': submitted && $v.event.description.$error }"
-              />
-              <div
-                  v-if="submitted && !$v.event.title.required"
-                  class="invalid-feedback"
-              >
-                This value is required.
-              </div>
             </div>
           </div>
           <div class="col-12">
@@ -360,7 +394,6 @@ export default {
                   v-model="provider.meetingProviderType"
                   class="form-control form-select"
                   name="category"
-                  :class="{ 'is-invalid': submitted && $v.provider.meetingProviderType.errors }"
               >
                 <option
                     v-for="option in this.providers"
@@ -370,12 +403,6 @@ export default {
                 </option
                 >
               </select>
-              <div
-                  v-if="submitted && !$v.provider.meetingProviderType.required"
-                  class="invalid-feedback"
-              >
-                This value is required.
-              </div>
             </div>
           </div>
           <div class="col-12">
@@ -386,7 +413,6 @@ export default {
                   class="form-control form-select"
                   name="category"
                   :disabled="this.provider.meetingProviderType == 'GOOGLE'"
-                  :class="{ 'is-invalid': submitted && $v.provider.conferenceType.errors }"
               >
                 <option
                     v-for="option in this.conferenceTypes"
@@ -396,12 +422,6 @@ export default {
                 </option
                 >
               </select>
-              <div
-                  v-if="submitted && !$v.provider.conferenceType.required"
-                  class="invalid-feedback"
-              >
-                This value is required.
-              </div>
             </div>
           </div>
         </div>
@@ -409,7 +429,7 @@ export default {
           <div class="mb-3">
             <label>Hesaplar</label>
             <multiselect
-                v-model="provider.providerAccounts"
+                v-model="provider.accounts"
                 :multiple="true"
                 track-by="accountMail"
                 label="accountMail"
@@ -417,15 +437,22 @@ export default {
                 placeholder="Konferans Hesapları Ekle"
             >
             </multiselect>
-            <div
-                v-if="submitted && !$v.provider.providerAccounts.required"
-                class="invalid-feedback"
-            >
-              This value is required.
-            </div>
           </div>
         </div>
+        <div class="col-12">
+          <div class="mb-3">
+            <label class="form-label">Rol Grupları</label>
+            <multiselect
+                v-model="provider.userRoleGroup"
+                :options="this.groups"
+                :multiple="false"
+                placeholder="Rol Grubu Ekle"
+            ></multiselect>
+          </div>
+        </div>
+
         <div class="text-end">
+          <b-button variant="danger" id="req-btn-delete-event" @click="confirm">Sil</b-button>
           <b-button variant="light" @click="hideModal">Kapat</b-button>
           <b-button type="submit" variant="success" class="ms-1">Kaydet
           </b-button

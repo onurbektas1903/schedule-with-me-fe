@@ -87,9 +87,6 @@ keycloak.init({onLoad: keyCloakObj.onLoad}).then((auth) => {
           user.token = keycloak.token;
           sessionStorage.setItem("authUser", JSON.stringify(user));
 
-        } else {
-          console.log('Token not refreshed, valid for '
-              + Math.round(keycloak.tokenParsed.exp + keycloak.timeSkew - new Date().getTime() / 1000) + ' seconds');
         }
       }).catch(() => {
         console.log('Failed to refresh token');

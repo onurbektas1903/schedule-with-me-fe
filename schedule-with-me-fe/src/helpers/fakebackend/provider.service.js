@@ -4,7 +4,6 @@ import {
     PROVIDER_API_BASE_URL, PROVIDER_API_GET_ALL_ACTIVE_URL,
     PROVIDER_API_GET_ALL_URL
 } from "@/constants/urls/providerEndpoints";
-import {GOOGLE_API_ACTIVE_PASSIVE_URL} from "@/constants/urls/googleEndpoints";
 var axiosRequest = new AxiosRequest("http://localhost:8080");
 
 export const providerService = {
@@ -12,7 +11,9 @@ export const providerService = {
     getAll,
     getProviderById,
     updateProviderActivePassiveInfo,
-    getActiveProviders
+    getActiveProviders,
+    updateProvider,
+    deleteProvider
 };
 
 async function  createMeetingProvider(provider) {
@@ -67,6 +68,28 @@ async function getProviderById(id) {
         return undefined;
     }
     return response.data;
+}
+async function  updateProvider(id,provider) {
+    await axiosRequest.put(
+        PROVIDER_API_BASE_URL+ `/${id}`,
+        provider,
+        {
+            headers: {
+                ContentType: { 'Content-Type': 'application/json' }
+            }
+        }
+    );
+}
+async function  deleteProvider(id) {
+    await axiosRequest.delete(
+        PROVIDER_API_BASE_URL+ `/${id}`,
+        {},
+        {
+            headers: {
+                ContentType: { 'Content-Type': 'application/json' }
+            }
+        }
+    );
 }
 async function  updateProviderActivePassiveInfo(id,isActive) {
     await axiosRequest.put(

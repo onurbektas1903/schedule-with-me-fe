@@ -1,13 +1,10 @@
 import AxiosRequest from "@/helpers/axios/AxiosRequest";
 import {
-    GOOGLE_API_ACTIVE_PASSIVE_URL,
-    GOOGLE_API_BASE_URL, GOOGLE_API_GET_ACTIVE_ACCOUNT_URL,
+    GOOGLE_API_BASE_URL,
     GOOGLE_API_GET_ALL_URL
 } from "@/constants/urls/googleEndpoints";
 import {
-    ZOOM_API_ACTIVE_ACCOUNTS_URL,
-    ZOOM_API_ACTIVE_PASSIVE_URL,
-    ZOOM_API_BASE_URL,
+    ZOOM_API_BASE_URL, ZOOM_API_GET_ALL_FREE_URL,
     ZOOM_API_GET_ALL_URL
 } from "@/constants/urls/zoomEndpoints";
 const axiosRequest = new AxiosRequest("http://localhost:8080");
@@ -20,10 +17,9 @@ export const accountService = {
     findZoomAccountById,
     updateGoogleAccount,
     updateZoomAccount,
-    getActiveZoomAccounts,
-    getActiveGoogleAccount,
     deleteGoogleAccount,
-    deleteZoomAccount
+    deleteZoomAccount,
+    getFreeZoomAccounts
 };
 //TODO google-zoom servislerini ayır
 async function  createZoomAccount(account) {
@@ -101,21 +97,6 @@ async function getGoogleAccounts() {
 
     return response.data;
 }
-async function getActiveGoogleAccount() {
-
-    const response = await axiosRequest.get(
-        GOOGLE_API_GET_ACTIVE_ACCOUNT_URL,
-        {
-            headers: {}
-        }
-    );
-
-    if (!response || !response.data){
-        return undefined;
-    }
-
-    return response.data;
-}
 async function deleteGoogleAccount(id) {
 
     const response = await axiosRequest.delete(
@@ -171,7 +152,6 @@ async function findZoomAccountById(id) {
 }
 async function getZoomAccounts() {
 
-    var axiosRequest = new AxiosRequest("http://localhost:8080");
     const response = await axiosRequest.get(
         ZOOM_API_GET_ALL_URL,
         {
@@ -185,11 +165,10 @@ async function getZoomAccounts() {
 
     return response.data;
 }
-async function getActiveZoomAccounts() {
+async function getFreeZoomAccounts(providerId) {
 
-    var axiosRequest = new AxiosRequest("http://localhost:8080");
     const response = await axiosRequest.get(
-        ZOOM_API_ACTIVE_ACCOUNTS_URL,
+        ZOOM_API_GET_ALL_FREE_URL+`/${providerId}`,
         {
             headers: {}
         }

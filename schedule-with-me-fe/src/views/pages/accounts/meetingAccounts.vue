@@ -8,6 +8,8 @@ import {accountService} from "@/helpers/fakebackend/account.service";
 import {required} from "vuelidate/lib/validators";
 import Swal from "sweetalert2";
 import {providers} from '../tables/dataAdvancedtable'
+import {meetingProviderExceptionHandler} from "@/views/pages/tables/meetingProviderErrorHandler";
+import {meetingAccountExceptionHandler} from "@/views/pages/accounts/meetingAccountExceptionHandler";
 
 /**
  * Datatable component
@@ -135,12 +137,12 @@ export default {
     confirm() {
       Swal.fire({
         title: "Emin misiniz?",
-        text: "You won't be able to delete this!",
         icon: "warning",
         showCancelButton: true,
         confirmButtonColor: "#34c38f",
         cancelButtonColor: "#f46a6a",
-        confirmButtonText: "Yes, delete it!",
+        confirmButtonText: "Evet!",
+        cancelButtonText: "Hayır",
       }).then((result) => {
         if (result.value) {
           this.deleteAccount();
@@ -155,13 +157,24 @@ export default {
         this.file = null;
         this.showGoogleModal = false;
 
+      }).catch(error => {
+        this.errormsg(meetingAccountExceptionHandler(error.response.data));
       });
     },
     handleFileUpload(event) {
       this.file = event.target.files[0]
       this.googleAccount.accountDetails.fileName = this.file.name;
     },
-
+    errormsg(errorMessage) {
+      Swal.fire({
+        position: "center",
+        icon: "error",
+        html: errorMessage,
+        title: "Hata Oluştu",
+        showConfirmButton: false,
+        timer: 1000,
+      });
+    },
     handleAccountEdit(item) {
       switch (this.selectedProviderType) {
         case 'ZOOM': {
@@ -272,6 +285,7 @@ export default {
         };
         this.getZoomAccounts();
       }).catch(error => {
+        //TODO add error
         this.$toasted.show("fasd");
         // this.$toasted.show(accountExceptionHandler(error.response.data));
         console.log(error);

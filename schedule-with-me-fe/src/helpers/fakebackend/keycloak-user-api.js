@@ -15,6 +15,16 @@ export default class KeycloakUserApi {
 
     return response && response.data ? response.data : undefined;
   }
+  async getAllRoleGroups({  } = {}) {
+    const response = await this.axiosRequest.get(
+      `/groups`,
+      {
+        headers: {},
+      }
+    );
+
+    return response && response.data ? response.data : undefined;
+  }
 
   async getAllEnabledUsers({ realm, token } = {}) {
     const data = await this.getAllUsers({ realm, token });

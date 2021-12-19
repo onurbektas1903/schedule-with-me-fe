@@ -112,7 +112,7 @@ export default {
         locale: "tr",
         droppable: true,
         eventResizableFromStart: true,
-        dateClick: this.addEvent,
+        dateClick: this.handleAddEvent,
         eventClick: this.handleEventSelected,
         eventsSet: this.handleEvents,
         weekends: true,
@@ -128,7 +128,6 @@ export default {
       categories: categories,
       submitted: false,
       submit: false,
-      newEventData: {},
       edit: {},
       deleteId: {},
       event: {
@@ -143,6 +142,7 @@ export default {
         category: "info",
         organizer: "",
         meetingURL: "",
+        providerAccount:"",
         changeSlotRequest: {
           id: "",
           title: "",
@@ -180,17 +180,7 @@ export default {
     this.getProviders();
     this.currentUser = JSON.parse(sessionStorage.getItem("authUser"));
     this.subscribeEvents();
-
-    this.keycloakUserApi.getAllUsers().then(users => {
-      let recipients = [];
-      users.forEach(user => {
-        recipients.push({
-          id: null,
-          name: user.email
-        });
-        this.recipients = recipients;
-      })
-    });
+    this.getAllUsers();
   },
   methods: {
     ...calendarMethods,
@@ -199,6 +189,18 @@ export default {
         let api = this.$refs.fullCalendar.getApi();
         api.removeAllEvents();
       }
+    },
+    getAllUsers(){
+      this.keycloakUserApi.getAllUsers().then(users => {
+        let recipients = [];
+        users.forEach(user => {
+          recipients.push({
+            id: null,
+            name: user.email
+          });
+          this.recipients = recipients;
+        })
+      });
     },
     handleSlotRequetsApproved(slotRequest) {
       this.createSlotRequestApproval(slotRequest, true);
@@ -323,43 +325,32 @@ export default {
     createOrUpdateMeeting(e) {
       this.submitted = true;
       // stop here if form is invalid
-      this.$v.$touch();
-      if (this.$v.$invalid) {
-        return;
-      } else {
-        this.event.start = Date.parse(this.event.start);
-        this.event.end = Date.parse(this.event.end);
+      let request = JSON.parse(JSON.stringify(this.event)) ;
+      request.start = Date.parse(this.event.start);
+      request.end = Date.parse(this.event.end);
         let calendarApi = this.$refs.fullCalendar.getApi();
+      this.startLoad();
         if (this.event.id && this.event.id !== "") {
-          meetingService.updateMeeting(this.event).then(response => {
+          meetingService.updateMeeting(request).then(response => {
             this.successmsg();
-            calendarApi.refetchEvents();
-
             this.showModal = false;
-            this.event = {};
-            this.newEventData = {};
+            calendarApi.refetchEvents();
+            Swal.close();
           }).catch(reason => {
-            console.log(reason);
+            Swal.close();
+            this.errormsg(error.response.data.message)
           });
 
         } else {
-          meetingService.createMeeting(this.event).then(response => {
-            this.successmsg();
-            calendarApi.refetchEvents();
-
+          meetingService.createMeeting(request).then(response => {
             this.showModal = false;
-            this.event = {};
-            this.newEventData = {};
-          }).catch(reason => {
-            //TODO handle errors
-            console.log(reason);
+            this.successmsg();
+            Swal.close();
+            calendarApi.refetchEvents();
+          }).catch(error => {
+            this.errormsg(error.response.data.message)
           });
         }
-
-
-      }
-      this.submitted = false;
-      this.event = {};
     },
     // eslint-disable-next-line no-unused-vars
     hideModal(e) {
@@ -411,7 +402,7 @@ export default {
     /**
      * Modal open for add event
      */
-    addEvent(info) {
+    handleAddEvent(info) {
 
       if (info.date < new Date()) {
         this.errormsg('Geçmişe yönelik görüşme oluşturulamaz');
@@ -419,7 +410,6 @@ export default {
       }
       this.setEventDefault();
       this.eventEditable = true;
-      this.newEventData = info;
       this.event.start = info.dateStr.split('+')[0];
       this.event.end = info.dateStr.split('+')[0];
       this.modalTitle = "Görüşme Oluştur"
@@ -433,6 +423,7 @@ export default {
       this.event.meetingURL = '';
       this.event.organizer = this.currentUser.email;
       this.event.recipients = [];
+      this.event.meetingProvider = null;
     },
     getProviders() {
       providerService.getAll().then(resp => {
@@ -483,10 +474,9 @@ export default {
     handleEventSelected(info) {
       const id = info && info.event ? info.event.id : info;
 
-      // this.getProviders();
+      this.getProviders();
       meetingService.getMeetingById(id).then(resp => {
         this.eventEditable = info && info.event ? info.event.start >= new Date() : true;
-
         this.event = resp;
         this.event.start = moment(resp.start).format().split('+')[0];
         this.event.end = moment(resp.end).format().split('+')[0];
@@ -600,7 +590,7 @@ export default {
       Swal.fire({
         position: "center",
         icon: "success",
-        title: "Event has been saved",
+        title: "Görüşme Başarıyla Kaydedildi",
         showConfirmButton: false,
         timer: 1000,
       });
@@ -614,6 +604,17 @@ export default {
         timer: 1200,
       });
     },
+    startLoad(){
+      Swal.fire({
+        title: "Kaydediliyor",
+        timer: 2000,
+        showConfirmButton: false,
+        timerProgressBar: true,
+        onBeforeOpen: () => {
+          Swal.showLoading();
+        }
+      });
+    }
   }
   ,
 }
@@ -673,14 +674,7 @@ export default {
                   type="text"
                   class="form-control"
                   placeholder="Başlık Ekle"
-                  :class="{ 'is-invalid': submitted && $v.event.title.$error }"
               />
-              <div
-                  v-if="submitted && !$v.event.title.required"
-                  class="invalid-feedback"
-              >
-                This value is required.
-              </div>
             </div>
           </div>
           <div class="col-12">
@@ -693,12 +687,6 @@ export default {
                   class="form-control"
                   placeholder="Açıklama Ekle"
               />
-              <div
-                  v-if="submitted && !$v.event.description.required"
-                  class="invalid-feedback"
-              >
-                This value is required.
-              </div>
             </div>
           </div>
           <div class="col-12">
@@ -711,13 +699,7 @@ export default {
                   class="form-control"
                   placeholder="Organizatör Ekle"
                   :readonly="!this.userCanEdit"
-                  :class="{ 'is-invalid': submitted && $v.event.organizer.$error }"
               />
-              <div
-                  v-if="submitted && !$v.event.organizer.required"
-                  class="invalid-feedback">
-                This value is required.
-              </div>
             </div>
           </div>
           <div class="col-12">
@@ -741,12 +723,6 @@ export default {
                   type="datetime-local"
                   id="start"
               ></b-form-input>
-              <div
-                  v-if="submitted && !$v.event.start.required"
-                  class="invalid-feedback"
-              >
-                This value is required.
-              </div>
             </div>
           </div>
           <div class="col-12">
@@ -758,12 +734,6 @@ export default {
                   type="datetime-local"
                   id="end"
               ></b-form-input>
-              <div
-                  v-if="submitted && !$v.event.end.required"
-                  class="invalid-feedback"
-              >
-                This value is required.
-              </div>
             </div>
           </div>
 
@@ -781,11 +751,6 @@ export default {
               ></multiselect>
               <b-button variant="light" @click="openRecipientsModal">Katılımcı Ekle</b-button>
 
-              <div
-                  v-if="submitted && !$v.event.title.required"
-                  class="invalid-feedback">
-                This value is required.
-              </div>
             </div>
           </div>
           <div class="col-12">
@@ -795,7 +760,6 @@ export default {
                   v-model="event.meetingProvider"
                   class="form-control form-select"
                   name="meetingProvider"
-                  :class="{ 'is-invalid': submitted && $v.event.meetingProvider.errors }"
               >
                 <option
                     v-for="option in this.providers"
@@ -805,12 +769,6 @@ export default {
                 </option
                 >
               </select>
-              <div
-                  v-if="submitted && !$v.event.meetingProvider.required"
-                  class="invalid-feedback"
-              >
-                This value is required.
-              </div>
             </div>
           </div>
         </div>
@@ -862,12 +820,6 @@ export default {
                 type="datetime-local"
                 id="slotStart"
             ></b-form-input>
-            <div
-                v-if="submitted && !$v.changeSlotRequest.startDate.required"
-                class="invalid-feedback"
-            >
-              This value is required.
-            </div>
           </div>
         </div>
         <div class="col-12">
@@ -880,7 +832,6 @@ export default {
                 id="end"
             ></b-form-input>
             <div
-                v-if="submitted && !$v.changeSlotRequest.endDate.required"
                 class="invalid-feedback"
             >
               This value is required.

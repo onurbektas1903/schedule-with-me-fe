@@ -334,6 +334,14 @@ export default [{
         component: () => import('../views/pages/tables/meetingProvider')
     },
     {
+        path: '/dashboards/index',
+        name: 'dashboard',
+        meta: {
+            authRequired: false,
+        },
+        component: () => import('../views/pages/dashboard/index')
+    },
+    {
         path: '/accounts/meetingAccounts',
         name: 'meetingAccount',
         meta: {

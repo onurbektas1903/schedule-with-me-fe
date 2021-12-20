@@ -17,7 +17,7 @@ import KeycloakUserApi from "@/helpers/fakebackend/keycloak-user-api";
  */
 export default {
   page: {
-    title: "Konferans Sağlayıcılar",
+    title: "Meeting Providers",
     meta: [{name: "description", content: appConfig.description}],
   },
   data() {
@@ -55,7 +55,7 @@ export default {
       providers: providers,
       conferenceTypes: conferenceTypes,
       tableData: [],
-      title: "Konferans Sağlayıcılar",
+      title: "Meeting Providers",
       items: [],
       totalRows: 1,
       currentPage: 1,
@@ -105,12 +105,6 @@ export default {
         case 'ZOOM': {
           accountService.getZoomAccounts(this.provider.id).then(resp => {
             this.meetingAccounts = resp;
-                // resp.map(account=>{
-                //     return {
-                //               key:account.id,
-                //               value:account.accountMail
-                //            }
-                // })
           });
           break;
         }
@@ -179,6 +173,8 @@ export default {
       this.provider = {};
     },
     createOrUpdateProvider() {
+      this.startLoad();
+
       if(this.provider.id && this.provider.id !== ''){
         this.updateProvider(this.provider);
       }else{
@@ -190,11 +186,11 @@ export default {
       providerService.createMeetingProvider(
           this.provider
       ).then(result => {
-        this.showModal = false;
         this.successmsg();
+        this.showModal = false;
         this.getProviders();
       }).catch(error => {
-        this.errormsg(meetingProviderExceptionHandler(error.response.data));
+        this.errormsg(error.response.data.message);
       });
     },
     mapAccounts(){
@@ -213,15 +209,17 @@ export default {
         this.successmsg();
         this.getProviders();
       }).catch(error => {
-        this.errormsg(meetingProviderExceptionHandler(error.response.data));
+        this.errormsg(error.response.data.message);
       });
     },
     deleteProvider() {
+      this.startLoad();
       providerService.deleteProvider(this.provider.id).then(value => {
         this.showModal = false;
         this.successmsg();
         this.getProviders();
-
+      }).catch(error => {
+        this.errormsg(error.response.data.message);
       });
     },
     getProviders() {
@@ -245,6 +243,7 @@ export default {
       });
     },
     successmsg() {
+      Swal.close();
       Swal.fire({
         position: "center",
         icon: "success",
@@ -253,7 +252,19 @@ export default {
         timer: 1000,
       });
     },
+    startLoad(){
+      Swal.fire({
+        title: "Operation In Progress",
+        timer: 2000,
+        showConfirmButton: false,
+        timerProgressBar: true,
+        onBeforeOpen: () => {
+          Swal.showLoading();
+        }
+      });
+    },
     errormsg(errorMessage) {
+      Swal.close();
       Swal.fire({
         position: "center",
         icon: "error",

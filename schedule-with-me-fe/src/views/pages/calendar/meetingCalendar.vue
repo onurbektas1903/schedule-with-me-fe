@@ -219,19 +219,7 @@ export default {
     openSearchModal() {
       this.showSearchModal = true;
     },
-    createSlotRequestApproval(slotRequest, isApproved) {
-      slotRequest.meetingId = this.event.id
-      slotRequest.startDate = Date.parse(slotRequest.startDate);
-      slotRequest.endDate = Date.parse(slotRequest.endDate);
-      meetingService.createSlotRequestApproval(slotRequest, isApproved).then(result => {
-        this.successmsg();
-        let calendarApi = this.$refs.fullCalendar.getApi();
-        calendarApi.refetchEvents();
-        this.hideSlotListModal();
-        this.hideModal();
-      });
 
-    },
     handleProviderFilterRemoved(e) {
       let api = this.$refs.fullCalendar.getApi();
       api.refetchEvents();
@@ -335,35 +323,53 @@ export default {
             this.successmsg();
             this.showModal = false;
             calendarApi.refetchEvents();
-            Swal.close();
           }).catch(reason => {
-            Swal.close();
             this.errormsg(error.response.data.message)
           });
 
         } else {
           meetingService.createMeeting(request).then(response => {
-            this.showModal = false;
+
             this.successmsg();
-            Swal.close();
+            this.showModal = false;
             calendarApi.refetchEvents();
           }).catch(error => {
             this.errormsg(error.response.data.message)
           });
         }
     },
+    createSlotRequestApproval(slotRequest, isApproved) {
+      this.startLoad();
+      slotRequest.meetingId = this.event.id
+      slotRequest.startDate = Date.parse(slotRequest.startDate);
+      slotRequest.endDate = Date.parse(slotRequest.endDate);
+      meetingService.createSlotRequestApproval(slotRequest, isApproved).then(result => {
+        this.successmsg();
+        let calendarApi = this.$refs.fullCalendar.getApi();
+        calendarApi.refetchEvents();
+        this.hideSlotListModal();
+        this.hideModal();
+      }).catch(error => {
+        this.errormsg(error.response.data.message)
+      });
+
+    },
     // eslint-disable-next-line no-unused-vars
     hideModal(e) {
-      this.$router.push({name: 'home'});
       this.submitted = false;
       this.showModal = false;
       this.eventEditable = false;
-      this.event = {};
+      this.setEventDefault();
+      if(this.param_id){
+        this.param_id =null;
+        this.$router.push({name: 'home'});
+      }
     },
     hideSlotRequestModal(e) {
       this.slotRequestModal = false;
     },
     createSlotChangeRequest(e) {
+      this.startLoad();
       this.changeSlotRequest.title = this.createChangeMailTitle();
       this.changeSlotRequest.startDate = Date.parse(this.changeSlotRequest.startDate);
       this.changeSlotRequest.endDate = Date.parse(this.changeSlotRequest.endDate);
@@ -378,25 +384,30 @@ export default {
         this.successmsg();
         this.slotRequestModal = false;
         this.event.slotRequests.push(this.convertSlotRequestDTO(response));
-      }).catch(reason => {
-        //TODO handle errors
-        console.log(reason);
+      }).catch(error => {
+        this.errormsg(error.response.data.message)
       });
     },
     deleteSlotRequest(id) {
+      this.startLoad();
       meetingService.deleteSlotRequest(id).then(response => {
+        this.successmsg();
         this.event.slotRequests = this.event.slotRequests.filter(sr => sr.id !== response.id);
         this.hideSlotListModal();
-        console.log(response + " deleted");
-      })
+
+      }).catch(error =>{
+        this.errormsg(error.response.data.message)
+      });
     },
     deleteMeeting(id) {
+      this.startLoad();
       meetingService.deleteMeeting(id).then(response => {
-        Swal.fire("Silindi!", "Görüşme başarıyla iptal edildi.", "success");
-
+        this.successmsg();
         let calendarApi = this.$refs.fullCalendar.getApi();
         calendarApi.refetchEvents();
         this.hideModal();
+      }).catch(error =>{
+        this.errormsg(error.response.data.message)
       });
     },
     /**
@@ -408,13 +419,14 @@ export default {
         this.errormsg('Geçmişe yönelik görüşme oluşturulamaz');
         return;
       }
+      this.getActiveProviders();
       this.setEventDefault();
       this.eventEditable = true;
       this.event.start = info.dateStr.split('+')[0];
       this.event.end = info.dateStr.split('+')[0];
       this.modalTitle = "Görüşme Oluştur"
       this.showModal = true;
-      this.getActiveProviders();
+
     },
     setEventDefault() {
       this.event.id = '';
@@ -527,9 +539,12 @@ export default {
     },
     openSlotListModal() {
       this.slotRequestListModal = true;
-      this.event.slotRequests = this.event.slotRequests.map(req => {
-        return this.convertSlotRequestDTO(req);
+      meetingService.getSlotRequests(this.event.id).then(slotList => {
+        this.event.slotRequests = slotList.map(req => {
+          return this.convertSlotRequestDTO(req);
+        });
       });
+
     },
     hideSlotListModal() {
       this.slotRequestListModal = false;
@@ -587,26 +602,28 @@ export default {
      * Show successfull Save Dialog
      */
     successmsg() {
+      Swal.close();
       Swal.fire({
         position: "center",
         icon: "success",
-        title: "Görüşme Başarıyla Kaydedildi",
+        title: "İşlem Başarıyla Gerçekleşti",
         showConfirmButton: false,
         timer: 1000,
       });
     },
     errormsg(msg) {
+      Swal.close();
       Swal.fire({
         position: "center",
         icon: "error",
         title: msg,
         showConfirmButton: false,
-        timer: 1200,
+        timer: 1500,
       });
     },
     startLoad(){
       Swal.fire({
-        title: "Kaydediliyor",
+        title: "Operation In Progress",
         timer: 2000,
         showConfirmButton: false,
         timerProgressBar: true,

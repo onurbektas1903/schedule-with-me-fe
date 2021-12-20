@@ -56,7 +56,7 @@ export default {
             <template #button-content>
               <span class="fw-semibold">Sort By:</span>
               <span class="text-muted"
-                >Recent<i class="mdi mdi-chevron-down ms-1"></i
+              >Recent<i class="mdi mdi-chevron-down ms-1"></i
               ></span>
             </template>
             <b-dropdown-item>Maximum</b-dropdown-item>
@@ -65,35 +65,35 @@ export default {
           </b-dropdown>
         </div>
 
-        <h4 class="card-title mb-4">Latest Transactions</h4>
+        <h4 class="card-title mb-4">Top Conversation Created Users</h4>
 
         <div class="table-responsive">
           <table class="table align-middle table-striped table-nowrap mb-0">
             <tbody>
-              <tr v-for="(item, index) in transactionData" :key="index">
-                <td>
-                  <img
+            <tr v-for="(item, index) in transactionData" :key="index">
+              <td>
+                <img
                     :src="`${item.profile}`"
                     alt="user-image"
                     class="avatar-xs rounded-circle me-2"
-                  />
-                  {{ item.name }}
-                </td>
-                <td>
-                  <i class="mdi mdi-checkbox-blank-circle text-success"></i>
-                  {{ item.status }}
-                </td>
-                <td>{{ item.amount }}</td>
-                <td>{{ item.date }}</td>
-                <td>
-                  <button
+                />
+                {{ item.name }}
+              </td>
+              <td>
+                <i class="mdi mdi-checkbox-blank-circle text-success"></i>
+                {{ item.status }}
+              </td>
+              <td>{{ item.amount }}</td>
+              <td>{{ item.date }}</td>
+              <td>
+                <button
                     type="button"
                     class="btn btn-light btn-sm waves-effect"
-                  >
-                    <i class="mdi mdi-square-edit-outline me-1"></i> Edit
-                  </button>
-                </td>
-              </tr>
+                >
+                  <i class="mdi mdi-square-edit-outline me-1"></i> Edit
+                </button>
+              </td>
+            </tr>
             </tbody>
           </table>
         </div>

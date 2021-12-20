@@ -21,4 +21,9 @@ export const menuItems = [{
         label: "menuitems.accounts.text",
         link: "/accounts/meetingAccounts"
     },
+    {
+        id: 5,
+        label: "menuitems.dashboards.text",
+        link: "/dashboards/index"
+    }
 ];

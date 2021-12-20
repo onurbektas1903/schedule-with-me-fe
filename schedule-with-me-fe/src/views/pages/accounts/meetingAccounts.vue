@@ -29,20 +29,16 @@ export default {
         id: "",
         accountMail: "",
         applicationName: "",
-        accountDetails: {
-          adminUserEmail: "",
-          fileName: ""
-        }
-
+        adminUserEmail: "",
+        fileName: "",
+        file:null
       },
       zoomAccount: {
         id: "",
         accountMail: "",
         applicationName: "",
-        accountDetails: {
-          apiKey: "",
-          apiSecret: ""
-        }
+        apiKey: "",
+        apiSecret: ""
 
       },
       showModal: false,
@@ -146,35 +142,60 @@ export default {
       }).then((result) => {
         if (result.value) {
           this.deleteAccount();
-          Swal.fire("Deleted!", "Event has been deleted.", "success");
         }
       });
     },
     deleteAccount(id) {
+      switch (this.selectedProviderType) {
+        case 'ZOOM': {
+          this.deleteZoomAccount();
+          break;
+        }
+        case 'GOOGLE': {
+          this.deleteGoogleAccount();
+          break;
+        }
+      }
+      this.startLoad();
       accountService.deleteGoogleAccount(this.googleAccount.id).then(value => {
+        this.successmsg();
         this.googleAccount = {};
         this.getGoogleAccounts();
         this.file = null;
         this.showGoogleModal = false;
 
       }).catch(error => {
-        this.errormsg(meetingAccountExceptionHandler(error.response.data));
+        this.errormsg(error.response.data.message);
       });
     },
     handleFileUpload(event) {
       this.file = event.target.files[0]
-      this.googleAccount.accountDetails.fileName = this.file.name;
+      this.googleAccount.fileName = this.file.name;
     },
-    errormsg(errorMessage) {
-      Swal.fire({
-        position: "center",
-        icon: "error",
-        html: errorMessage,
-        title: "Hata Oluştu",
-        showConfirmButton: false,
-        timer: 1000,
+
+    deleteGoogleAccount(){
+      this.startLoad();
+      accountService.deleteGoogleAccount(this.googleAccount.id).then(value => {
+        this.successmsg();
+        this.getGoogleAccounts();
+        this.googleAccount = {};
+        this.file = null;
+        this.showGoogleModal = false;
+      }).catch(error => {
+        this.errormsg(error.response.data.message);
       });
     },
+    deleteZoomAccount(){
+      accountService.deleteZoomAccount(this.zoomAccount.id).then(value => {
+        this.zoomAccount = {};
+        this.getZoomAccounts();
+        this.showZoomModal = false;
+
+      }).catch(error => {
+        this.errormsg(error.response.data.message);
+      });
+    },
+
     handleAccountEdit(item) {
       switch (this.selectedProviderType) {
         case 'ZOOM': {
@@ -188,6 +209,7 @@ export default {
         case 'GOOGLE': {
           accountService.findGoogleAccountById(item.id).then(resp => {
             this.googleAccount = resp;
+            this.googleAccount.fileName = resp.file;
             this.showGoogleModal = true;
           });
           break;
@@ -202,10 +224,8 @@ export default {
             id: "",
             accountMail: "",
             applicationName: "",
-            accountDetails: {
-              apiKey: "",
-              apiSecret: ""
-            }
+            apiKey: "",
+            apiSecret: ""
           };
           this.showZoomModal = true;
           break;
@@ -226,7 +246,30 @@ export default {
       this.showGoogleModal = false;
       this.showZoomModal = false;
     },
+    errormsg(errorMessage) {
+      Swal.close();
+      Swal.fire({
+        position: "center",
+        icon: "error",
+        html: errorMessage,
+        title: "Hata Oluştu",
+        showConfirmButton: false,
+        timer: 1500
+      });
+    },
+    startLoad() {
+      Swal.fire({
+        title: "Operation In Progress",
+        timer: 2000,
+        showConfirmButton: false,
+        timerProgressBar: true,
+        onBeforeOpen: () => {
+          Swal.showLoading();
+        }
+      });
+    },
     successmsg() {
+      Swal.close();
       Swal.fire({
         position: "center",
         icon: "success",
@@ -264,12 +307,11 @@ export default {
       accountService.createGoogleAccount(this.googleAccount, this.file).then(resp => {
         this.handleGoogleSaveOrUpdateResult();
       }).catch(error => {
-        this.$toasted.show("fasd");
-        // this.$toasted.show(accountExceptionHandler(error.response.data));
-        console.log(error);
+        this.errormsg(error.response.data.message);
       });
     },
     saveZoomAccount(e) {
+      this.startLoad();
       //TODO handle validations
       accountService.createZoomAccount(this.zoomAccount).then(resp => {
         this.successmsg();
@@ -278,17 +320,12 @@ export default {
           id: "",
           accountMail: "",
           applicationName: "",
-          accountDetails: {
-            apiKey: "",
-            apiSecret: ""
-          }
+          apiKey: "",
+          apiSecret: ""
         };
         this.getZoomAccounts();
       }).catch(error => {
-        //TODO add error
-        this.$toasted.show("fasd");
-        // this.$toasted.show(accountExceptionHandler(error.response.data));
-        console.log(error);
+        this.errormsg(error.response.data.message);
       });
     }
   },
@@ -434,6 +471,7 @@ export default {
               <label>Hesap Dosyası</label>
               <input
                   @change="handleFileUpload( $event)"
+                  v-text="googleAccount.fileName"
                   type="file"
                   class="form-control"
                   id="inputGroupFile03"
@@ -492,7 +530,7 @@ export default {
             <label for="apiKey">Api Anahtarı</label>
             <input
                 id="apiKey"
-                v-model="zoomAccount.accountDetails.apiKey"
+                v-model="zoomAccount.apiKey"
                 type="text"
                 class="form-control"
             />
@@ -502,19 +540,20 @@ export default {
           <label for="apiSecret">Api Secret</label>
           <input
               id="apiSecret"
-              v-model="zoomAccount.accountDetails.apiSecret"
+              v-model="zoomAccount.apiSecret"
               type="text"
               class="form-control"
-              :class="{ 'is-invalid': submitted && $v.zoomAccount.accountDetails.apiSecret.$error }"
+              :class="{ 'is-invalid': submitted && $v.zoomAccount.apiSecret.$error }"
           />
           <div
-              v-if="submitted && !$v.zoomAccount.accountDetails.apiSecret.required"
+              v-if="submitted && !$v.zoomAccount.apiSecret.required"
               class="invalid-feedback"
           >
             This value is required.
           </div>
         </div>
         <div class="text-end">
+          <b-button variant="danger" id="req-btn-zoom-delete-event" @click="confirm">Sil</b-button>
           <b-button variant="light" @click="hideModal">Kapat</b-button>
           <b-button @click="saveZoomAccount" variant="success" class="ms-1">Kaydet
           </b-button>

@@ -2,7 +2,7 @@ import AxiosRequest from "@/helpers/axios/AxiosRequest";
 import {
     MEETING_API_BASE_URL,
     MEETING_API_GET_ALL_SLOTS_URL,
-    MEETING_API_GET_ALL_URL, MEETING_API_SEARCH_ALL_URL, MEETING_API_USAGE_URL,
+    MEETING_API_GET_ALL_URL, MEETING_API_ORGANIZER_URL, MEETING_API_SEARCH_ALL_URL, MEETING_API_USAGE_URL,
     MEETING_SLOT_URL
 } from "../../constants/urls/meetingEndpoints";
 const axiosRequest = new AxiosRequest("http://localhost:8080");
@@ -18,7 +18,8 @@ export const meetingService = {
     deleteMeeting,
     updateMeeting,
     searchMeetings,
-    getMeetingProviderUsageStatistics
+    getMeetingProviderUsageStatistics,
+    getMeetingOrganizerStatistics
 };
 
 async function  createMeeting(meeting) {
@@ -104,6 +105,24 @@ async function getMeetingProviderUsageStatistics(start,end) {
     // eslint-disable-next-line @typescript-eslint/naming-convention
     const response = await axiosRequest.get(
         MEETING_API_USAGE_URL,
+        {
+            params: {
+                start,
+                end
+            },
+            headers: {}
+        }
+    );
+    if (!response || !response.data){
+        return undefined;
+    }
+    return response.data;
+}
+async function getMeetingOrganizerStatistics(start,end) {
+
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    const response = await axiosRequest.get(
+        MEETING_API_ORGANIZER_URL,
         {
             params: {
                 start,

@@ -9,7 +9,7 @@ export default [
             beforeResolve(routeTo, routeFrom, next) {
                 if (process.env.VUE_APP_DEFAULT_AUTH === "firebase") {
                     store.dispatch('auth/logOut')
-                } else if (process.env.VUE_APP_DEFAULT_AUTH === "fakebackend") {
+                } else if (process.env.VUE_APP_DEFAULT_AUTH === "backend") {
                     store.dispatch('authfack/logout')
                 }
                 const authRequiredOnPreviousRoute = routeFrom.matched.some(

@@ -1,4 +1,4 @@
-import {providerService} from "@/helpers/fakebackend/provider.service";
+import {providerService} from "@/helpers/backend/provider.service";
 
 export const state = {
  providers:[]

@@ -5,12 +5,12 @@ import appConfig from "@/app.config";
 import Multiselect from "vue-multiselect";
 
 import {providers, conferenceTypes} from "./dataAdvancedtable";
-import {providerService} from "@/helpers/fakebackend/provider.service";
+import {providerService} from "@/helpers/backend/provider.service";
 import { required, minLength, email, sameAs } from "vuelidate/lib/validators";
 import Swal from "sweetalert2";
-import {accountService} from "@/helpers/fakebackend/account.service";
+import {accountService} from "@/helpers/backend/account.service";
 import {meetingProviderExceptionHandler} from "@/views/pages/tables/meetingProviderErrorHandler";
-import KeycloakUserApi from "@/helpers/fakebackend/keycloak-user-api";
+import KeycloakUserApi from "@/helpers/backend/keycloak-user-api";
 
 /**
  * Datatable component
@@ -680,19 +680,19 @@ export default {
                 track-by="accountMail"
                 label="accountMail"
                 :options=this.meetingAccounts
-                placeholder="Konferans Hesapları Ekle"
+                placeholder="Add Conference Accounts"
             >
             </multiselect>
           </div>
         </div>
         <div class="col-12">
           <div class="mb-3">
-            <label class="form-label">Rol Grupları</label>
+            <label class="form-label">Role Groups</label>
             <multiselect
                 v-model="provider.userRoleGroup"
                 :options="this.groups"
                 :multiple="false"
-                placeholder="Rol Grubu Ekle"
+                placeholder="Add Role Group"
             ></multiselect>
           </div>
         </div>

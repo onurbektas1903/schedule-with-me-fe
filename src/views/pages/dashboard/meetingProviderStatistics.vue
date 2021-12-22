@@ -1,5 +1,5 @@
 <script>
-import {meetingService} from "@/helpers/fakebackend/meeting.service";
+import {meetingService} from "@/helpers/backend/meeting.service";
 import DatePicker from "vue2-datepicker";
 
 export default {

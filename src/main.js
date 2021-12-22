@@ -13,8 +13,6 @@ import store from '@/state/store';
 import VueSweetalert2 from 'vue-sweetalert2';
 import * as VueGoogleMaps from 'vue2-google-maps'
 
-import { initFirebaseBackend } from './helpers/firebase/authUtils';
-import { configureFakeBackend } from './helpers/fakebackend/fake-backend';
 
 const configs = {
   keycloakURL: process.env.VUE_APP_KEYCLOAK_AUTH_URL,
@@ -23,16 +21,9 @@ const configs = {
   wsUrl:  process.env.VUE_APP_WS_URL
 };
 
-if (process.env.VUE_APP_DEFAULT_AUTH === "firebase") {
-  initFirebaseBackend(keycloakConfig);
-} else {
-  configureFakeBackend();
-}
-
 import "@/assets/scss/app.scss";
 import Keycloak from "keycloak-js";
-import SocketApi from "@/helpers/fakebackend/socket-api";
-import Toasted from 'vue-toasted';
+import SocketApi from "@/helpers/backend/socket-api";
 
 Vue.component('VueSlideBar', VueSlideBar)
 Vue.use(VueSweetalert2);
@@ -40,17 +31,6 @@ Vue.component('apexchart', VueApexCharts)
 Vue.use(BootstrapVue)
 Vue.use(Vuelidate)
 Vue.use(vco)
-Vue.use(VueGoogleMaps, {
-  load: {
-    key: 'AIzaSyAbvyBxmMbFhrzP9Z8moyYr6dCr-pzjhBE',
-    libraries: 'places',
-  },
-  installComponents: true
-});
-Vue.use(Toasted, {
-  duration: 1000,
-  position: 'top-center'
-})
 
 Vue.config.productionTip = false
 const keyCloakObj = {
@@ -59,11 +39,14 @@ const keyCloakObj = {
   clientId: configs.clientId,
   onLoad: 'login-required'
 };
+//TODO keycloakı servis haline getirerek çağrıldığı yerleri refactor et
 let keycloak = new Keycloak(keyCloakObj);
 keycloak.init({onLoad: keyCloakObj.onLoad}).then((auth) => {
   if (!auth) {
     window.location.reload();
   } else {
+    //TODO keycloak'ı servis haline getirince bu kısmı sil
+    window.keycloakObj = keycloak;
     let roleGroups = [];
     keycloak.idTokenParsed.user_group_info.forEach(grp=>{
       roleGroups.push(grp);

@@ -50,7 +50,7 @@ export default {
       text: null,
       flag: null,
       value: null,
-      currentUser:"",
+      currentUser: "",
     };
   },
   mounted() {
@@ -64,9 +64,9 @@ export default {
     initFullScreen() {
       document.body.classList.toggle("fullscreen-enable");
       if (
-        !document.fullscreenElement &&
-        /* alternative standard method */ !document.mozFullScreenElement &&
-        !document.webkitFullscreenElement
+          !document.fullscreenElement &&
+          /* alternative standard method */ !document.mozFullScreenElement &&
+          !document.webkitFullscreenElement
       ) {
         // current working methods
         if (document.documentElement.requestFullscreen) {
@@ -75,7 +75,7 @@ export default {
           document.documentElement.mozRequestFullScreen();
         } else if (document.documentElement.webkitRequestFullscreen) {
           document.documentElement.webkitRequestFullscreen(
-            Element.ALLOW_KEYBOARD_INPUT
+              Element.ALLOW_KEYBOARD_INPUT
           );
         }
       } else {
@@ -100,8 +100,13 @@ export default {
     toggleMenu() {
       this.$parent.toggleMenu();
     },
+    logout(){
+      if(window.keycloakObj){
+        window.keycloakObj.logout();
+      }
+    }
   },
-  components: { simplebar },
+  components: {simplebar},
   watch: {
     type: {
       immediate: true,
@@ -152,38 +157,38 @@ export default {
         <div class="navbar-brand-box">
           <router-link to="/" class="logo logo-dark">
             <span class="logo-sm">
-              <img src="@/assets/images/logo-sm.png" alt="" height="22" />
+              <img src="@/assets/images/logo-sm.png" alt="" height="22"/>
             </span>
             <span class="logo-lg">
-              <img src="@/assets/images/logo-dark.png" alt="" height="23" />
+              <img src="@/assets/images/logo-dark.png" alt="" height="23"/>
             </span>
           </router-link>
 
           <router-link to="/" class="logo logo-light">
             <span class="logo-sm">
-              <img src="@/assets/images/logo-sm-light.png" alt="" height="22" />
+              <img src="@/assets/images/logo-sm-light.png" alt="" height="22"/>
             </span>
             <span class="logo-lg">
-              <img src="@/assets/images/logo-light.png" alt="" height="23" />
+              <img src="@/assets/images/logo-light.png" alt="" height="23"/>
             </span>
           </router-link>
         </div>
 
         <button
-          type="button"
-          class="btn btn-sm px-3 font-size-16 vertinav-toggle header-item waves-effect"
-          id="vertical-menu-btn"
-          @click="toggleMenu()"
+            type="button"
+            class="btn btn-sm px-3 font-size-16 vertinav-toggle header-item waves-effect"
+            id="vertical-menu-btn"
+            @click="toggleMenu()"
         >
           <i class="fa fa-fw fa-bars"></i>
         </button>
 
         <button
-          type="button"
-          class="btn btn-sm px-3 font-size-16 horinav-toggle header-item waves-effect waves-light"
-          data-bs-toggle="collapse"
-          data-bs-target="#topnav-menu-content"
-          @click="toggleMenu()"
+            type="button"
+            class="btn btn-sm px-3 font-size-16 horinav-toggle header-item waves-effect waves-light"
+            data-bs-toggle="collapse"
+            data-bs-target="#topnav-menu-content"
+            @click="toggleMenu()"
         >
           <i class="fa fa-fw fa-bars"></i>
         </button>
@@ -192,9 +197,9 @@ export default {
         <form class="app-search d-none d-lg-block">
           <div class="position-relative">
             <input
-              type="text"
-              class="form-control"
-              :placeholder="$t('navbar.search.text')"
+                type="text"
+                class="form-control"
+                :placeholder="$t('navbar.search.text')"
             />
             <span class="mdi mdi-magnify"></span>
           </div>
@@ -203,10 +208,10 @@ export default {
 
       <div class="d-flex">
         <b-dropdown
-          variant="white"
-          class="d-inline-block d-lg-none ms-2"
-          toggle-class="header-item noti-icon"
-          menu-class="dropdown-menu-lg dropdown-menu-end p-0"
+            variant="white"
+            class="d-inline-block d-lg-none ms-2"
+            toggle-class="header-item noti-icon"
+            menu-class="dropdown-menu-lg dropdown-menu-end p-0"
         >
           <template #button-content>
             <i class="mdi mdi-magnify"></i>
@@ -215,10 +220,10 @@ export default {
             <div class="form-group m-0">
               <div class="input-group">
                 <input
-                  type="text"
-                  class="form-control"
-                  :placeholder="$t('navbar.search.text')"
-                  aria-label="Recipient's username"
+                    type="text"
+                    class="form-control"
+                    :placeholder="$t('navbar.search.text')"
+                    aria-label="Recipient's username"
                 />
                 <div class="input-group-append">
                   <button class="btn btn-primary" type="submit">
@@ -231,29 +236,29 @@ export default {
         </b-dropdown>
 
         <b-dropdown
-          class="d-inline-block"
-          variant="white"
-          right
-          toggle-class="header-item"
-          menu-class="dropdown-menu-end"
+            class="d-inline-block"
+            variant="white"
+            right
+            toggle-class="header-item"
+            menu-class="dropdown-menu-end"
         >
           <template v-slot:button-content>
-            <img class :src="flag" alt="Header Language" height="16" />
+            <img class :src="flag" alt="Header Language" height="16"/>
             {{ text }}
           </template>
           <b-dropdown-item
-            class="notify-item"
-            v-for="(entry, i) in languages"
-            :key="`Lang${i}`"
-            :value="entry"
-            @click="setLanguage(entry.language, entry.title, entry.flag)"
-            :class="{ active: lan === entry.language }"
+              class="notify-item"
+              v-for="(entry, i) in languages"
+              :key="`Lang${i}`"
+              :value="entry"
+              @click="setLanguage(entry.language, entry.title, entry.flag)"
+              :class="{ active: lan === entry.language }"
           >
             <img
-              :src="`${entry.flag}`"
-              alt="user-image"
-              class="me-1"
-              height="12"
+                :src="`${entry.flag}`"
+                alt="user-image"
+                class="me-1"
+                height="12"
             />
             <span class="align-middle">{{ entry.title }}</span>
           </b-dropdown-item>
@@ -261,19 +266,19 @@ export default {
 
         <div class="dropdown d-none d-lg-inline-block ms-1">
           <button
-            type="button"
-            class="btn header-item noti-icon waves-effect"
-            @click="initFullScreen"
+              type="button"
+              class="btn header-item noti-icon waves-effect"
+              @click="initFullScreen"
           >
             <i class="mdi mdi-fullscreen"></i>
           </button>
         </div>
 
         <b-dropdown
-          variant="black"
-          class="d-inline-block"
-          toggle-class="header-item noti-icon"
-          menu-class="dropdown-menu-lg dropdown-menu-end p-0"
+            variant="black"
+            class="d-inline-block"
+            toggle-class="header-item noti-icon"
+            menu-class="dropdown-menu-lg dropdown-menu-end p-0"
         >
           <template #button-content>
             <i class="mdi mdi-bell"></i>
@@ -298,7 +303,7 @@ export default {
               <div class="d-flex">
                 <div class="avatar-xs me-3">
                   <span
-                    class="avatar-title bg-primary rounded-circle font-size-16"
+                      class="avatar-title bg-primary rounded-circle font-size-16"
                   >
                     <i class="bx bx-cart"></i>
                   </span>
@@ -314,8 +319,8 @@ export default {
                     <p class="mb-0 font-size-12">
                       <i class="mdi mdi-clock-outline"></i>
                       <span key="t-min-ago">{{
-                        $t("navbar.dropdown.notification.order.time")
-                      }}</span>
+                          $t("navbar.dropdown.notification.order.time")
+                        }}</span>
                     </p>
                   </div>
                 </div>
@@ -324,9 +329,9 @@ export default {
             <a href="javascript:void(0);" class="text-reset notification-item d-block">
               <div class="d-flex">
                 <img
-                  src="@/assets/images/users/avatar-3.jpg"
-                  class="me-3 rounded-circle avatar-xs"
-                  alt="user-pic"
+                    src="@/assets/images/users/avatar-3.jpg"
+                    class="me-3 rounded-circle avatar-xs"
+                    alt="user-pic"
                 />
                 <div class="flex-1">
                   <h6 class="mt-0 mb-1">
@@ -339,8 +344,8 @@ export default {
                     <p class="mb-0 font-size-12">
                       <i class="mdi mdi-clock-outline"></i>
                       <span key="t-hours-ago">{{
-                        $t("navbar.dropdown.notification.james.time")
-                      }}</span>
+                          $t("navbar.dropdown.notification.james.time")
+                        }}</span>
                     </p>
                   </div>
                 </div>
@@ -350,7 +355,7 @@ export default {
               <div class="d-flex">
                 <div class="avatar-xs me-3">
                   <span
-                    class="avatar-title bg-success rounded-circle font-size-16"
+                      class="avatar-title bg-success rounded-circle font-size-16"
                   >
                     <i class="bx bx-badge-check"></i>
                   </span>
@@ -366,8 +371,8 @@ export default {
                     <p class="mb-0 font-size-12">
                       <i class="mdi mdi-clock-outline"></i>
                       <span key="t-min-ago">{{
-                        $t("navbar.dropdown.notification.item.time")
-                      }}</span>
+                          $t("navbar.dropdown.notification.item.time")
+                        }}</span>
                     </p>
                   </div>
                 </div>
@@ -376,9 +381,9 @@ export default {
             <a href="javascript:void(0);" class="text-reset notification-item d-block">
               <div class="d-flex">
                 <img
-                  src="@/assets/images/users/avatar-4.jpg"
-                  class="me-3 rounded-circle avatar-xs"
-                  alt="user-pic"
+                    src="@/assets/images/users/avatar-4.jpg"
+                    class="me-3 rounded-circle avatar-xs"
+                    alt="user-pic"
                 />
                 <div class="flex-1">
                   <h6 class="mt-0 mb-1">
@@ -391,8 +396,8 @@ export default {
                     <p class="mb-0 font-size-12">
                       <i class="mdi mdi-clock-outline"></i>
                       <span key="t-hours-ago">{{
-                        $t("navbar.dropdown.notification.salena.time")
-                      }}</span>
+                          $t("navbar.dropdown.notification.salena.time")
+                        }}</span>
                     </p>
                   </div>
                 </div>
@@ -401,8 +406,8 @@ export default {
           </simplebar>
           <div class="p-2 border-top d-grid">
             <a
-              class="btn btn-sm btn-link font-size-14 text-center"
-              href="javascript:void(0)"
+                class="btn btn-sm btn-link font-size-14 text-center"
+                href="javascript:void(0)"
             >
               <i class="mdi mdi-arrow-right-circle me-1"></i>
               <span>{{ $t("navbar.dropdown.notification.button") }}</span>
@@ -411,104 +416,30 @@ export default {
         </b-dropdown>
 
         <b-dropdown
-          class="d-inline-block"
-          menu-class="dropdown-menu-end"
-          variant="white"
-          toggle-class="header-item"
+            class="d-inline-block"
+            menu-class="dropdown-menu-end"
+            variant="white"
+            toggle-class="header-item"
         >
           <template #button-content>
             <img
-              class="rounded-circle header-profile-user"
-              src="@/assets/images/users/avatar-1.jpg"
-              alt="Header Avatar"
+                class="rounded-circle header-profile-user"
+                src="@/assets/images/users/avatar-9.jpg"
+                alt="Header Avatar"
             />
-<!--            <input v-model="currentUser.email"></input>-->
-            <span class="d-none d-xl-inline-block ms-1"> {{currentUser.email}}</span>
+            <span class="d-none d-xl-inline-block ms-1"> {{ currentUser.email }}</span>
             <i class="mdi mdi-chevron-down d-none d-xl-inline-block"></i>
           </template>
-
-          <!-- item-->
-          <h6 class="dropdown-header">
-            {{ $t("navbar.dropdown.profile.list.welcome") }}
-          </h6>
-          <b-dropdown-item
-            ><i
-              class="mdi mdi-account-circle text-muted font-size-16 align-middle me-1"
-            ></i>
-            <span class="align-middle" key="t-profile">{{
-              $t("navbar.dropdown.profile.list.profile")
-            }}</span></b-dropdown-item
-          >
-          <b-dropdown-item
-            ><i
-              class="mdi mdi-message-text-outline text-muted font-size-16 align-middle me-1"
-            ></i>
-            <span class="align-middle" key="t-messages">{{
-              $t("navbar.dropdown.profile.list.messages")
-            }}</span></b-dropdown-item
-          >
-          <b-dropdown-item
-            ><i
-              class="mdi mdi-calendar-check-outline text-muted font-size-16 align-middle me-1"
-            ></i>
-            <span class="align-middle" key="t-taskboard">{{
-              $t("navbar.dropdown.profile.list.taskboard")
-            }}</span></b-dropdown-item
-          >
-          <b-dropdown-item
-            ><i
-              class="mdi mdi-lifebuoy text-muted font-size-16 align-middle me-1"
-            ></i>
-            <span class="align-middle" key="t-help">{{
-              $t("navbar.dropdown.profile.list.help")
-            }}</span></b-dropdown-item
-          >
-          <div class="dropdown-divider"></div>
-          <b-dropdown-item
-            ><i
-              class="mdi mdi-wallet text-muted font-size-16 align-middle me-1"
-            ></i>
-            <span class="align-middle" key="t-balance"
-              >{{ $t("navbar.dropdown.profile.list.balance.text") }} :
-              <b>{{
-                $t("navbar.dropdown.profile.list.balance.amount")
-              }}</b></span
-            ></b-dropdown-item
-          >
-          <b-dropdown-item
-            ><span
-              class="badge bg-success bg-soft text-success mt-1 float-end"
-              >{{ $t("navbar.dropdown.profile.list.settings.badge") }}</span
-            ><i
-              class="mdi mdi-cog-outline text-muted font-size-16 align-middle me-1"
-            ></i>
-            <span class="align-middle" key="t-settings">{{
-              $t("navbar.dropdown.profile.list.settings.text")
-            }}</span></b-dropdown-item
-          >
-          <b-dropdown-item
-            ><i
-              class="mdi mdi-lock text-muted font-size-16 align-middle me-1"
-            ></i>
-            <span class="align-middle" key="t-lock-screen">{{
-              $t("navbar.dropdown.profile.list.lockscreen")
-            }}</span></b-dropdown-item
-          >
-          <a class="dropdown-item" href="/logout"
-            ><i
-              class="mdi mdi-logout text-muted font-size-16 align-middle me-1"
-            ></i>
-            <span class="align-middle" key="t-logout">{{
-              $t("navbar.dropdown.profile.list.logout")
-            }}</span></a
-          >
+          <div class="col text-center">
+            <b-button class="d-inline-flex align-items-center" variant="light" @click="logout">Logout</b-button>
+          </div>
         </b-dropdown>
 
         <div class="dropdown d-inline-block">
           <button
-            type="button"
-            class="btn header-item noti-icon right-bar-toggle toggle-right"
-            @click="toggleRightSidebar"
+              type="button"
+              class="btn header-item noti-icon right-bar-toggle toggle-right"
+              @click="toggleRightSidebar"
           >
             <i class="bx bx-cog bx-spin toggle-right"></i>
           </button>

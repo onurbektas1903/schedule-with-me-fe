@@ -105,7 +105,7 @@ async function getMeetingsByProviderIdBtwDates(providerId,start,end) {
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
     const response = await axiosRequest.get(
-        `MEETING_API_GET_ALL_URL/${id}`,
+        `${MEETING_API_GET_ALL_URL}/${providerId}`,
         {
             params: {
                 start,
@@ -139,7 +139,6 @@ async function getMeetingProviderUsageStatistics(start,end) {
 }
 async function getMeetingOrganizerStatistics(start,end) {
 
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     const response = await axiosRequest.get(
         MEETING_API_ORGANIZER_URL,
         {

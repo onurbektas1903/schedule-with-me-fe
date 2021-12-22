@@ -4,7 +4,7 @@ import PageHeader from "@/components/page-header";
 import appConfig from "@/app.config";
 import Multiselect from "vue-multiselect";
 
-import {accountService} from "@/helpers/fakebackend/account.service";
+import {accountService} from "@/helpers/backend/account.service";
 import {required} from "vuelidate/lib/validators";
 import Swal from "sweetalert2";
 import {providers} from '../tables/dataAdvancedtable'
@@ -252,7 +252,7 @@ export default {
         position: "center",
         icon: "error",
         html: errorMessage,
-        title: "Hata Oluştu",
+        title: "Error Occurred",
         showConfirmButton: false,
         timer: 1500
       });
@@ -273,7 +273,7 @@ export default {
       Swal.fire({
         position: "center",
         icon: "success",
-        title: "İşlem Başarıyla Gerçekleşti",
+        title: "Operation Successfully Completed",
         showConfirmButton: false,
         timer: 1000,
       });
@@ -287,9 +287,7 @@ export default {
       accountService.updateGoogleAccount(this.googleAccount, this.file).then(resp => {
         this.handleGoogleSaveOrUpdateResult();
       }).catch(error => {
-        this.$toasted.show("fasd");
-        // this.$toasted.show(accountExceptionHandler(error.response.data));
-        console.log(error);
+        this.errormsg(error.response.data.message);
       });
     },
     handleGoogleSaveOrUpdateResult() {
@@ -312,7 +310,6 @@ export default {
     },
     saveZoomAccount(e) {
       this.startLoad();
-      //TODO handle validations
       accountService.createZoomAccount(this.zoomAccount).then(resp => {
         this.successmsg();
         this.showZoomModal = false;
@@ -339,11 +336,11 @@ export default {
       <div class="col-12">
         <div class="card">
           <div class="card-body">
-            <h4 class="card-title">Hesap İşlemleri</h4>
+            <h4 class="card-title">Account Management</h4>
             <div class="row mt-4" id="datatable_wrapper">
               <div class="col-12">
                 <div class="mb-3">
-                  <label class="form-label">Konferans Sağlayıcı Tipi</label>
+                  <label class="form-label">Conference Provider Type</label>
                   <select
                       @change="handleProviderSelected"
                       v-model="selectedProviderType"
@@ -416,7 +413,7 @@ export default {
             </div>
             <div class="col-sm-12 col-md-6">
               <div id="tickets-table_length" class="dataTables_length">
-                <b-button variant="light" @click="addProviderAccount">Konferans Sağlayıcı Ekle</b-button>
+                <b-button variant="light" @click="addProviderAccount">Add Provider</b-button>
               </div>
             </div>
           </div>
@@ -425,7 +422,7 @@ export default {
     </div>
     <b-modal
         v-model="showGoogleModal"
-        title="Konferans Hesapları"
+        title="Conference Accounts"
         title-class="text-black font-18"
         header-class="py-3 px-4 border-bottom-0"
         body-class="p-4"
@@ -436,7 +433,7 @@ export default {
         <div class="row">
           <div class="col-12">
             <div class="mb-3">
-              <label for="accountMail">Hesap Email</label>
+              <label for="accountMail">Account Email</label>
               <input
                   id="accountMail"
                   v-model="googleAccount.accountMail"
@@ -452,7 +449,7 @@ export default {
               </div>
             </div>
             <div class="mb-3">
-              <label for="googleapplicationName">Uygulama Adı</label>
+              <label for="googleapplicationName">Application Name</label>
               <input
                   id="googleapplicationName"
                   v-model="googleAccount.applicationName"
@@ -468,7 +465,7 @@ export default {
               </div>
             </div>
             <div class="mb-3">
-              <label>Hesap Dosyası</label>
+              <label>Credentials File</label>
               <input
                   @change="handleFileUpload( $event)"
                   v-text="googleAccount.fileName"
@@ -480,9 +477,9 @@ export default {
               />
             </div>
             <div class="text-end">
-              <b-button variant="danger" id="req-btn-delete-event" @click="confirm">Sil</b-button>
-              <b-button variant="light" @click="hideModal">Kapat</b-button>
-              <b-button @click="saveOrUpdateGoogleAccount" variant="success" class="ms-1">Kaydet
+              <b-button variant="danger" id="req-btn-delete-event" @click="confirm">Delete</b-button>
+              <b-button variant="light" @click="hideModal">Close</b-button>
+              <b-button @click="saveOrUpdateGoogleAccount" variant="success" class="ms-1">Save
               </b-button>
             </div>
           </div>
@@ -502,7 +499,7 @@ export default {
         <div class="row">
           <div class="col-12">
             <div class="mb-3">
-              <label>Hesap Adresi </label>
+              <label>Account Mail </label>
               <input
                   v-model="zoomAccount.accountMail"
                   type="text"
@@ -511,7 +508,7 @@ export default {
             </div>
           </div>
           <div class="mb-3">
-            <label for="applicationName">Uygulama Adı</label>
+            <label for="applicationName">App Name</label>
             <input
                 id="applicationName"
                 v-model="zoomAccount.applicationName"
@@ -527,7 +524,7 @@ export default {
             </div>
           </div>
           <div class="mb-3">
-            <label for="apiKey">Api Anahtarı</label>
+            <label for="apiKey">Api Key</label>
             <input
                 id="apiKey"
                 v-model="zoomAccount.apiKey"
@@ -553,9 +550,9 @@ export default {
           </div>
         </div>
         <div class="text-end">
-          <b-button variant="danger" id="req-btn-zoom-delete-event" @click="confirm">Sil</b-button>
-          <b-button variant="light" @click="hideModal">Kapat</b-button>
-          <b-button @click="saveZoomAccount" variant="success" class="ms-1">Kaydet
+          <b-button variant="danger" id="req-btn-zoom-delete-event" @click="confirm">Remove</b-button>
+          <b-button variant="light" @click="hideModal">Close</b-button>
+          <b-button @click="saveZoomAccount" variant="success" class="ms-1">Save
           </b-button>
         </div>
         </div>

@@ -4,7 +4,6 @@ export default class KeycloakUserApi {
   constructor() {
     this.axiosRequest = new AxiosRequest('http://localhost:8888/auth/admin/realms/obss-scheduler');
   }
-
   async getAllUsers({  } = {}) {
     const response = await this.axiosRequest.get(
       `/users`,

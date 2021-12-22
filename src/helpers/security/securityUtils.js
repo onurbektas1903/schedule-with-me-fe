@@ -1,14 +1,10 @@
 // Add the Firebase products that you want to use
-import "firebase/auth";
-import "firebase/firestore";
 import Keycloak from "keycloak-js";
 
 class KeycloakAuthBackend {
     constructor(keycloakConfig) {
 
     }
-
-
 
     /**
      * Logout the user
@@ -20,7 +16,6 @@ class KeycloakAuthBackend {
     setLoggeedInUser = (user) => {
         sessionStorage.setItem("authUser", JSON.stringify(user));
     }
-
     /**
      * Returns the authenticated user
      */

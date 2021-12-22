@@ -13,11 +13,11 @@ import Layout from "../../layouts/main";
 import PageHeader from "@/components/page-header";
 import appConfig from "@/app.config";
 import {categories} from "./data-calendar";
-import {meetingService} from "@/helpers/fakebackend/meeting.service";
-import {providerService} from "@/helpers/fakebackend/provider.service";
+import {meetingService} from "@/helpers/backend/meeting.service";
+import {providerService} from "@/helpers/backend/provider.service";
 import {calendarComputed, calendarMethods} from "@/state/helpers";
 import Multiselect from "vue-multiselect";
-import KeycloakUserApi from "@/helpers/fakebackend/keycloak-user-api";
+import KeycloakUserApi from "@/helpers/backend/keycloak-user-api";
 import eventbus from "@/eventbus";
 import Footer from "@/components/footer";
 
@@ -129,6 +129,7 @@ export default {
       showModal: false,
       modalTitle: "",
       showRecipientsModal: false,
+      externalRecipient: "",
       categories: categories,
       submitted: false,
       submit: false,
@@ -184,12 +185,24 @@ export default {
     this.getProviders();
     this.currentUser = JSON.parse(sessionStorage.getItem("authUser"));
     this.subscribeEvents();
-    this.getAllUsers();
   },
   methods: {
     ...calendarMethods,
     handleProviderFilterSelected(e) {
-      meetingService.getMeetingsByProviderIdBtwDates()
+      let calendarApi = this.$refs.fullCalendar.getApi();
+      const start = Date.parse(calendarApi.view.currentStart);
+      const end = Date.parse(calendarApi.view.currentEnd);
+      meetingService.getMeetingsByProviderIdBtwDates(e.id, start, end).then(resp => {
+        calendarApi.removeAllEvents();
+        resp.forEach(event => {
+          calendarApi.addEvent({
+            id: event.id,
+            title: event.title,
+            start: event.start,
+            end: event.end
+          })
+        });
+      })
     },
     getAllUsers() {
       this.keycloakUserApi.getAllUsers().then(users => {
@@ -209,7 +222,7 @@ export default {
     handleSlotRequetsRejected(slotRequest) {
       this.createSlotRequestApproval(slotRequest, false);
     },
-    handleListViewSelected(){
+    handleListViewSelected() {
 
       // let api = this.$refs.fullCalendar.getApi();
       // api.removeAllEvents();
@@ -230,7 +243,6 @@ export default {
     handleProviderFilterRemoved(e) {
       let api = this.$refs.fullCalendar.getApi();
       api.refetchEvents();
-      // api.changeView('timeGridWeek');
     },
     subscribeEvents() {
       eventbus.$on('eventCreated', (payload) => {
@@ -238,10 +250,10 @@ export default {
         if (this.currentUser.email !== event.organizer) {
           let calendarApi = this.$refs.fullCalendar.getApi();
 
-          switch(payload.actionType){
+          switch (payload.actionType) {
             case 'CREATED':
               this.event.id = event.id;
-              this.currentEvents = calendarApi.addEvent({
+              calendarApi.addEvent({
                 id: event.id,
                 title: event.title,
                 start: event.start,
@@ -249,15 +261,15 @@ export default {
               });
               break;
             case 'DELETED':
-              let calendarEvent= calendarApi.getEventById(event.id);
+              let calendarEvent = calendarApi.getEventById(event.id);
               calendarEvent.remove();
               break;
             case 'UPDATED':
-              let calendarEventUpdated= calendarApi.getEventById(event.id);
+              let calendarEventUpdated = calendarApi.getEventById(event.id);
               calendarEventUpdated.remove();
               this.event.id = event.id;
-              this.currentEvents = calendarApi.addEvent({
-                id: event.id,
+              calendarApi.addEvent({
+                id: this.event.id,
                 title: event.title,
                 start: event.start,
                 end: event.end
@@ -335,7 +347,9 @@ export default {
       })
     },
     addRecipient(e) {
-      this.event.recipients = this.recipients;
+      this.event.recipients.push( {id:"",name:this.externalRecipient });
+      this.recipients.push({id:"",name:this.externalRecipient });
+      this.externalRecipient ="";
       this.showRecipientsModal = false;
     },
     /**
@@ -397,7 +411,7 @@ export default {
         this.$router.push({name: 'home'});
       }
     },
-    hideSearchModal(){
+    hideSearchModal() {
       this.showSearchModal = false;
     },
     hideSlotRequestModal(e) {
@@ -449,7 +463,7 @@ export default {
      * Modal open for add event
      */
     handleAddEvent(info) {
-
+      this.getAllUsers();
       if (info.date < new Date()) {
         this.errormsg('Geçmişe yönelik görüşme oluşturulamaz');
         return;
@@ -520,7 +534,7 @@ export default {
     },
     handleEventSelected(info) {
       const id = info && info.event ? info.event.id : info;
-
+      this.getAllUsers();
       this.getProviders();
       meetingService.getMeetingById(id).then(resp => {
         this.eventEditable = info && info.event ? info.event.start >= new Date() : true;
@@ -535,7 +549,7 @@ export default {
               conferenceType: resp.meetingProvider.conferenceType,
               name: resp.meetingProvider.name
             };
-        this.modalTitle = "Güncelle"
+        this.modalTitle = "Update"
 
         this.setUserPermissions();
         if (this.userCanView) {
@@ -547,10 +561,9 @@ export default {
     },
 
     createChangeMailTitle() {
-      //TODO ingilizce hale getir
       const start = moment(this.changeSlotRequest.startDate).format(('DD-MM-YYYY hh:mm'));
       const end = moment(this.changeSlotRequest.endDate).format(('DD-MM-YYYY hh:mm'));
-      return `${start} ve ${end} Tarihleri için Değişiklik İsteği`;
+      return `Change Meeting Date Request For: ${start} and ${end} `;
     },
     closeModal() {
       this.eventModal = false;
@@ -596,7 +609,7 @@ export default {
     },
     confirmSlot() {
       Swal.fire({
-        title: "Silmek İstediğinizden Etmek Emin Misiniz?",
+        title: "Are You Sure ?",
         text: "You won't be able to delete this!",
         icon: "warning",
         showCancelButton: true,
@@ -612,13 +625,13 @@ export default {
     },
     confirMeet(eventId) {
       Swal.fire({
-        title: "Görüşmeyi İptal Etmek İstediğinizden Emin Misiniz?",
+        title: "Are You Sure?",
         icon: "warning",
         showCancelButton: true,
         confirmButtonColor: "#34c38f",
         cancelButtonColor: "#f46a6a",
-        confirmButtonText: "Evet!",
-        cancelButtonText: "Vazgeç"
+        confirmButtonText: "Yes!",
+        cancelButtonText: "Cancel"
       }).then((result) => {
         if (result.value) {
           this.deleteMeeting(eventId);
@@ -641,7 +654,7 @@ export default {
       Swal.fire({
         position: "center",
         icon: "success",
-        title: "İşlem Başarıyla Gerçekleşti",
+        title: "Operation Successfully Completed",
         showConfirmButton: false,
         timer: 1000,
       });
@@ -682,7 +695,7 @@ export default {
           <div class="card-body">
             <div class="app-calendar">
               <div class="mb-3">
-                <label class="form-label">Konferans Sağlayıcı</label>
+                <label class="form-label">Conference Provider</label>
                 <multiselect
                     v-model="providerFilter"
                     class="form-control form-select"
@@ -693,7 +706,7 @@ export default {
                     @remove="this.handleProviderFilterRemoved"
                     track-by="name"
                     label="name"
-                    placeholder="Uygun Zaman için Filtreleme"
+                    placeholder="Filter with Provider"
                 >
                 </multiselect>
               </div>
@@ -731,13 +744,13 @@ export default {
           </div>
           <div class="col-12">
             <div class="mb-3">
-              <label for="title">Açıklama</label>
+              <label for="title">Desciption</label>
               <textarea
                   id="description"
                   v-model="event.description"
                   type="text"
                   class="form-control"
-                  placeholder="Açıklama Ekle"
+                  placeholder="Desciption Ekle"
               />
             </div>
           </div>
@@ -769,7 +782,7 @@ export default {
           <div class="col-12">
             <div class="mb-3">
               <label class="form-label"
-              >Başlangıç Tarihi</label>
+              >Start Date</label>
               <b-form-input
                   v-model="event.start"
                   type="datetime-local"
@@ -780,7 +793,7 @@ export default {
           <div class="col-12">
             <div class="mb-3">
               <label class="form-label"
-              >Bitiş Tarihi</label>
+              >End Date</label>
               <b-form-input
                   v-model="event.end"
                   type="datetime-local"
@@ -791,7 +804,7 @@ export default {
 
           <div class="col-12">
             <div class="mb-3">
-              <label>Katılımcılar</label>
+              <label>Recipients</label>
               <multiselect
                   :readonly=!this.eventEditable
                   v-model="event.recipients"
@@ -799,15 +812,15 @@ export default {
                   track-by="name"
                   label="name"
                   :multiple="true"
-                  placeholder="Katılımcı Ekle"
+                  placeholder="Add Recipient"
               ></multiselect>
-              <b-button variant="light" @click="openRecipientsModal">Katılımcı Ekle</b-button>
+              <b-button variant="light" @click="openRecipientsModal">Add Recipient</b-button>
 
             </div>
           </div>
           <div class="col-12">
             <div class="mb-3">
-              <label class="form-label">Konferans Sağlayıcı</label>
+              <label class="form-label">Conference Provider</label>
               <select
                   v-model="event.meetingProvider"
                   class="form-control form-select"
@@ -831,10 +844,10 @@ export default {
               variant="danger" id="btn-delete-meet-event" @click="confirMeet(event.id)"
           >Sil
           </b-button>
-          <b-button variant="light" @click="hideModal">Kapat</b-button>
-          <b-button v-if="this.eventEditable" type="submit" variant="success" class="ms-1">Kaydet</b-button>
+          <b-button variant="light" @click="hideModal">Close</b-button>
+          <b-button v-if="this.eventEditable" type="submit" variant="success" class="ms-1">Save</b-button>
           <b-button v-if=" this.event.id !== '' "
-                    @click="openSlotListModal" variant="success" class="ms-1">Değişim Talepleri
+                    @click="openSlotListModal" variant="success" class="ms-1">Change Requests
           </b-button>
         </div>
       </form>
@@ -853,7 +866,7 @@ export default {
         <div class="row">
           <div class="col-12">
             <div class="mb-3">
-              <label for="slotDescription">Açıklama</label>
+              <label for="slotDescription">Description</label>
               <textarea
                   id="slotDescription"
                   v-model="changeSlotRequest.description"
@@ -866,7 +879,7 @@ export default {
         <div class="col-12">
           <div class="mb-3">
             <label class="form-label"
-            >Başlangıç Tarihi</label>
+            >Start Date</label>
             <b-form-input
                 v-model="changeSlotRequest.startDate"
                 type="datetime-local"
@@ -877,7 +890,7 @@ export default {
         <div class="col-12">
           <div class="mb-3">
             <label class="form-label"
-            >Bitiş Tarihi</label>
+            >End Date</label>
             <b-form-input
                 v-model="changeSlotRequest.endDate"
                 type="datetime-local"
@@ -893,7 +906,7 @@ export default {
         <div class="row">
           <div class="col-12">
             <div class="mb-3">
-              <label for="slotRequestStatus">Statüs</label>
+              <label for="slotRequestStatus">Status</label>
               <input
                   id="slotRequestStatus"
                   v-model="changeSlotRequest.requestStatus"
@@ -916,7 +929,7 @@ export default {
                 variant="light"
                 class="btn btn-light me-1"
                 @click="hideSlotRequestModal"
-            >Kapat
+            >Close
             </b-button>
 
             <b-button variant="success" @click="createSlotChangeRequest">Kaydet</b-button>
@@ -964,13 +977,13 @@ export default {
                 <td>
                   <b-button v-if="currentUser.email === event.organizer && slotRequest.requestStatus === 'WAITING'"
                             variant="light"
-                            @click="handleSlotRequetsApproved(slotRequest)">Onayla
+                            @click="handleSlotRequetsApproved(slotRequest)">Approve
                   </b-button>
                 </td>
                 <td>
                   <b-button v-if="currentUser.email === event.organizer && slotRequest.requestStatus === 'WAITING'"
                             variant="light"
-                            @click="handleSlotRequetsRejected(slotRequest)">Reddet
+                            @click="handleSlotRequetsRejected(slotRequest)">Reject
                   </b-button>
                 </td>
 
@@ -980,7 +993,7 @@ export default {
             <footer>
               <b-button
                   v-if=" this.event.id !== '' && this.currentUser.email !== this.event.organizer && this.isUserParticipant"
-                  @click="addSlotRequest" variant="success" class="ms-1">Ekle
+                  @click="addSlotRequest" variant="success" class="ms-1">Add
               </b-button>
             </footer>
           </div>
@@ -990,7 +1003,7 @@ export default {
 
     <b-modal
         v-model="showRecipientsModal"
-        title="Katılımcılar"
+        title="Recipients"
         title-class="text-black font-18"
         header-class="py-3 px-4 border-bottom-0"
         body-class="p-4"
@@ -999,29 +1012,15 @@ export default {
     >
       <form>
         <div class="row">
-
-          <div class="table-responsive">
-            <table class="table mb-0"
-                   contenteditable="false"
-            >
-              <thead>
-              <tr>
-                <th>Katılımcı Hesabı</th>
-              </tr>
-              </thead>
-              <tbody>
-              <tr v-for="(recipient) in event.recipients" :key="recipient.id">
-                <td><input class="form-control" v-model="recipient.name"/></td>
-              </tr>
-              </tbody>
-              <br>
-              <div class="text-end">
-                <b-button variant="light" @click="insertNewRecipient">Yeni Katılımcı</b-button>
-                <b-button class="ms-1" variant="light" @click="addRecipient">Kaydet</b-button>
-                <b-button variant="light" @click="hideRecipientsModal">Kapat</b-button>
-              </div>
-            </table>
-          </div>
+          <input
+              v-model="externalRecipient"
+              type="text"
+              class="form-control"
+          />
+          <div class="text-end">
+          <b-button class="ms-1" variant="light" @click="addRecipient">Add</b-button>
+          <b-button variant="light" @click="hideRecipientsModal">Close</b-button>
+        </div>
         </div>
       </form>
     </b-modal>
@@ -1038,7 +1037,7 @@ export default {
         <div class="row">
           <div class="col-12">
             <div class="mb-3">
-              <label for="title">Başlık</label>
+              <label for="title">Title</label>
               <input
                   id="search-title"
                   v-model="searchParam.title"
@@ -1049,7 +1048,7 @@ export default {
           </div>
           <div class="col-12">
             <div class="mb-3">
-              <label for="title">Açıklama</label>
+              <label for="title">Desciption</label>
               <textarea
                   id="search-description"
                   v-model="searchParam.description"
@@ -1061,7 +1060,7 @@ export default {
           <div class="col-12">
             <div class="mb-3">
               <label class="form-label"
-              >Başlangıç Tarihi</label>
+              >Start Date</label>
               <b-form-input
                   v-model="searchParam.start"
                   type="datetime-local"
@@ -1072,7 +1071,7 @@ export default {
           <div class="col-12">
             <div class="mb-3">
               <label class="form-label"
-              >Bitiş Tarihi</label>
+              >End Date</label>
               <b-form-input
                   v-model="searchParam.end"
                   type="datetime-local"
@@ -1083,7 +1082,7 @@ export default {
 
           <div class="col-12">
             <div class="mb-3">
-              <label>Katılımcılar</label>
+              <label>Recipients</label>
               <multiselect
                   :multiple=false
                   :readonly=!this.eventEditable
@@ -1093,7 +1092,7 @@ export default {
                   track-by="name"
                   label="name"
                   value="name"
-                  placeholder="Katılımcı Ekle"
+                  placeholder="Add Recipient"
               ></multiselect>
 
             </div>
@@ -1101,8 +1100,8 @@ export default {
         </div>
 
         <div class="text-end">
-          <b-button variant="light" @click="hideSearchModal">Kapat</b-button>
-          <b-button @click="handleSearch" variant="success" class="ms-1">Arama Başlat</b-button>
+          <b-button variant="light" @click="hideSearchModal">Close</b-button>
+          <b-button @click="handleSearch" variant="success" class="ms-1">Start Search</b-button>
         </div>
       </form>
     </b-modal>
